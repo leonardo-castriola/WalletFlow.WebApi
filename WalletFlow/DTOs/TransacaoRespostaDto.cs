@@ -8,6 +8,6 @@ namespace WalletFlow.WebApi.DTOs
         public string Descricao { get; set; } = string.Empty;
         public decimal Valor { get; set; }
         public string TipoFormatado { get; set; } = string.Empty;
-        public DateTime DataCadastro { get; set; }
+        public DateTimeOffset DataCadastro { get; set; }
     }
 }

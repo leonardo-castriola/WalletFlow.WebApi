@@ -1,6 +1,19 @@
 @WalletFlow_HostAddress = http://localhost:5250
 
-GET {{WalletFlow_HostAddress}}/weatherforecast/
+### Criar receita
+POST {{WalletFlow_HostAddress}}/api/transacao
+Content-Type: application/json
+
+{
+  "descricao": "Salário",
+  "valor": 3500.00,
+  "tipo": 1
+}
+
+### Listar transações (página 1)
+GET {{WalletFlow_HostAddress}}/api/transacao?page=1&pageSize=50
 Accept: application/json
 
-###
+### Consultar saldo
+GET {{WalletFlow_HostAddress}}/api/transacao/saldo
+Accept: application/json

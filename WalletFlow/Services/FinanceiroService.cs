@@ -15,15 +15,25 @@ namespace WalletFlow.WebApi.Services
             _context = context;
         }
 
-        public async Task<decimal> CalcularSaldoConsolidadoAsync()
+        public async Task<decimal> CalcularSaldoConsolidadoAsync(CancellationToken cancellationToken = default)
         {
-            var transacoes = await _context.Transacoes.ToListAsync();
+            decimal saldo = 0m;
+            var transacoes = _context.Transacoes
+                .AsNoTracking()
+                .Select(t => new { t.Tipo, t.Valor })
+                .AsAsyncEnumerable();
 
-            // Soma receitas e subtrai despesas
-            decimal receitas = transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor);
-            decimal despesas = transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor);
+            await foreach (var transacao in transacoes.WithCancellation(cancellationToken))
+            {
+                saldo += transacao.Tipo switch
+                {
+                    TipoTransacao.Receita => transacao.Valor,
+                    TipoTransacao.Despesa => -transacao.Valor,
+                    _ => 0m
+                };
+            }
 
-            return receitas - despesas;
+            return saldo;
         }
     }
 }

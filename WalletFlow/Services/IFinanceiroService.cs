@@ -4,6 +4,6 @@ namespace WalletFlow.WebApi.Services
 {
     public interface IFinanceiroService
     {
-        Task<decimal> CalcularSaldoConsolidadoAsync();
+        Task<decimal> CalcularSaldoConsolidadoAsync(CancellationToken cancellationToken = default);
     }
 }

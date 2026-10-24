@@ -9,6 +9,6 @@ namespace WalletFlow.WebApi.Entities
         public string Descricao { get; set; } = string.Empty;
         public decimal Valor { get; set; }
         public TipoTransacao Tipo { get; set; }
-        public DateTime DataCadastro { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset DataCadastro { get; set; } = DateTimeOffset.UtcNow;
     }
 }
