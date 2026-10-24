@@ -1,4 +1,6 @@
 <Solution>
   <Project Path="WalletFlow/WalletFlow.csproj" />
   <Project Path="WalletFlow.Tests/WalletFlow.Tests.csproj" />
+  <Project Path="WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj" />
+  <Project Path="WalletFlow.Blazor/WalletFlow.Blazor.Client/WalletFlow.Blazor.Client.csproj" />
 </Solution>
