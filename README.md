@@ -3,19 +3,20 @@
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
 ![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-Web%20API-512BD4?logo=dotnet&logoColor=white)
 
-> API REST para registrar movimentações financeiras e consultar o saldo consolidado de uma carteira.
+> API REST para registrar receitas e despesas, consultar movimentações e calcular o saldo consolidado de uma carteira.
 
 ## Sobre o projeto
 
-O WalletFlow.WebApi é uma API de exemplo para controle de receitas e despesas. As movimentações são persistidas em SQLite e podem ser consultadas individualmente, listadas em conjunto ou usadas para calcular o saldo.
+O WalletFlow.WebApi é uma API de exemplo para controle de movimentações financeiras. Os registros são persistidos em SQLite, e o Entity Framework Core aplica as migrações durante a inicialização.
 
 ## Funcionalidades
 
-- Cadastro de transações como despesa ou receita.
-- Consulta de todas as transações ou de uma transação pelo ID.
-- Cálculo do saldo (receitas menos despesas).
-- Documentação interativa com Swagger em ambiente de desenvolvimento.
-- Criação do banco SQLite e das tabelas na primeira inicialização.
+- Cadastro de despesas e receitas.
+- Consulta de uma movimentação pelo ID.
+- Listagem paginada, com até 100 itens por página.
+- Cálculo do saldo consolidado.
+- Autenticação por chave de API fora do ambiente de desenvolvimento.
+- Documentação interativa com Swagger em desenvolvimento.
 
 ## Tecnologias
 
@@ -45,28 +46,36 @@ dotnet restore WalletFlow/WalletFlow.csproj
 dotnet run --project WalletFlow/WalletFlow.csproj
 ```
 
-O perfil HTTP de desenvolvimento usa `http://localhost:5250` e abre o Swagger no navegador. O perfil HTTPS usa `https://localhost:7013` (e também disponibiliza HTTP na porta 5250). Para escolher o perfil explicitamente:
+No perfil local de desenvolvimento, a aplicação usa `http://localhost:5250` e abre o Swagger no navegador. A interface está em `/swagger` e só fica disponível em desenvolvimento. O perfil HTTPS usa `https://localhost:7013`.
+
+O banco SQLite `Wallet.db` fica na pasta `WalletFlow/` e é criado ou atualizado pelas migrações do Entity Framework na inicialização.
+
+## Autenticação
+
+Em desenvolvimento, as rotas podem ser usadas sem chave. Fora de `Development`, configure uma chave forte pela variável de ambiente `Authentication__ApiKey`. Não inclua a chave no repositório.
+
+Exemplo para iniciar em produção no Bash:
 
 ```bash
-dotnet run --project WalletFlow/WalletFlow.csproj --launch-profile http
+export ASPNETCORE_ENVIRONMENT=Production
+export Authentication__ApiKey='substitua-por-uma-chave-forte'
+dotnet run --project WalletFlow/WalletFlow.csproj --no-launch-profile
 ```
 
-O banco `Wallet.db` é criado na pasta de execução da aplicação na primeira inicialização.
+Envie a chave no cabeçalho `X-API-Key` em cada requisição. Sem uma chave configurada, a aplicação não inicia fora de desenvolvimento.
 
 ## Como usar
 
-Com a API em execução, acesse o Swagger em [http://localhost:5250/swagger](http://localhost:5250/swagger) para explorar e executar as rotas.
-
-### Rotas
+Com a API em execução localmente, abra [http://localhost:5250/swagger](http://localhost:5250/swagger) para explorar as rotas.
 
 | Método | Rota | Descrição |
 | --- | --- | --- |
-| `POST` | `/api/transacao` | Cadastra uma transação |
-| `GET` | `/api/transacao` | Lista as transações |
-| `GET` | `/api/transacao/{id}` | Consulta uma transação pelo ID |
+| `POST` | `/api/transacao` | Cadastra uma movimentação |
+| `GET` | `/api/transacao?page=1&pageSize=50` | Lista movimentações paginadas |
+| `GET` | `/api/transacao/{id}` | Consulta uma movimentação pelo ID |
 | `GET` | `/api/transacao/saldo` | Retorna o saldo consolidado |
 
-Exemplo de cadastro (tipo `0` para despesa e `1` para receita):
+No cadastro, use `tipo: 0` para despesa e `tipo: 1` para receita:
 
 ```bash
 curl -X POST http://localhost:5250/api/transacao \
@@ -74,18 +83,19 @@ curl -X POST http://localhost:5250/api/transacao \
   -d '{"descricao":"Salário","valor":3500.00,"tipo":1}'
 ```
 
-O cadastro retorna `201 Created` com a transação criada, incluindo o ID e a data de cadastro em UTC. A resposta de saldo tem o formato `{"saldoConsolidado":3500.00}`.
+A listagem aceita `page` (padrão `1`) e `pageSize` (padrão `50`, máximo `100`). A resposta inclui `items`, `page`, `pageSize`, `totalCount` e `totalPages`.
 
-Exemplo de consulta do saldo:
+Em produção, acrescente a chave à requisição:
 
 ```bash
-curl http://localhost:5250/api/transacao/saldo
+curl http://localhost:5250/api/transacao/saldo \
+  -H "X-API-Key: sua-chave-forte"
 ```
 
 ## Como contribuir
 
 1. Crie uma branch para sua alteração.
-2. Faça uma mudança pequena e focada, usando commits atômicos com mensagens no padrão Conventional Commits (por exemplo, `feat: adiciona filtro por período`).
+2. Faça uma mudança pequena e focada, usando commits atômicos com mensagens no padrão Conventional Commits, por exemplo `feat: adiciona filtro por período`.
 3. Abra um Pull Request explicando a alteração e como ela foi verificada.
 
 ## Licença
