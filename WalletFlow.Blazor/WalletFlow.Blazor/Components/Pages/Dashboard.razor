@@ -1,0 +1,122 @@
+@page "/painel"
+@rendermode InteractiveServer
+@using WalletFlow.Blazor.DTOs
+@using WalletFlow.Blazor.Services
+@inject TransacaoApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Painel financeiro | WalletFlow</PageTitle>
+
+<div class="dashboard-header">
+    <div>
+        <p class="eyebrow">CONTROLE FINANCEIRO</p>
+        <h1>Bem-vindo ao WalletFlow</h1>
+        <p class="text-secondary">Seu dinheiro organizado em um só lugar.</p>
+    </div>
+    <button class="btn btn-outline-secondary" @onclick="CarregarAsync" disabled="@_carregando">Atualizar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_erro))
+{
+    <div class="alert alert-danger" role="alert">@_erro</div>
+}
+
+<div class="home-grid">
+    <section class="balance-card" aria-live="polite">
+        <div>
+            <p class="balance-label">Saldo consolidado</p>
+            <p class="balance-value">@(_saldo?.ToString("C", Cultura) ?? (_carregando ? "Carregando..." : "Indisponível"))</p>
+        </div>
+        <span class="balance-icon" aria-hidden="true">R$</span>
+    </section>
+
+    <section class="panel overview-card">
+        <p class="eyebrow">MOVIMENTAÇÕES</p>
+        <p class="overview-number">@(_totalTransacoes?.ToString("N0", Cultura) ?? "—")</p>
+        <p class="text-secondary">transação(ões) registradas</p>
+    </section>
+</div>
+
+<section class="panel transactions-panel dashboard-transactions">
+    <div class="section-heading">
+        <div><p class="eyebrow">ATIVIDADE RECENTE</p><h2>Últimas transações</h2></div>
+        <button class="btn btn-link" @onclick='() => Navigation.NavigateTo("/transacoes")'>Ver extrato completo</button>
+    </div>
+
+    @if (_carregando)
+    {
+        <p class="empty-state" role="status">Carregando movimentações...</p>
+    }
+    else if (_transacoesRecentes.Count == 0)
+    {
+        <p class="empty-state">Ainda não há transações cadastradas.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table transaction-table align-middle">
+                <thead><tr><th>Descrição</th><th>Data</th><th>Tipo</th><th class="text-end">Valor</th></tr></thead>
+                <tbody>
+                    @foreach (var transacao in _transacoesRecentes)
+                    {
+                        <tr>
+                            <td class="transaction-description">@transacao.Descricao</td>
+                            <td>@transacao.DataCadastro.ToLocalTime().ToString("dd/MM/yyyy", Cultura)</td>
+                            <td><span class="type-pill @(transacao.TipoFormatado == "Receita" ? "income" : "expense")">@transacao.TipoFormatado</span></td>
+                            <td class="text-end transaction-value">@transacao.Valor.ToString("C", Cultura)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="panel welcome-panel">
+    <div>
+        <p class="eyebrow">COMECE POR AQUI</p>
+        <h2>O que você deseja fazer?</h2>
+        <p class="text-secondary">Registre uma movimentação ou consulte seu extrato com filtros por período e tipo.</p>
+    </div>
+    <div class="quick-actions">
+        <button class="btn btn-primary" @onclick='() => Navigation.NavigateTo("/transacoes/nova")'>＋ Nova transação</button>
+        <button class="btn btn-outline-primary" @onclick='() => Navigation.NavigateTo("/transacoes")'>Ver extrato</button>
+    </div>
+</section>
+
+@code {
+    private static readonly System.Globalization.CultureInfo Cultura = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+    private decimal? _saldo;
+    private int? _totalTransacoes;
+    private IReadOnlyList<TransacaoRespostaDto> _transacoesRecentes = [];
+    private bool _carregando = true;
+    private string? _erro;
+
+    protected override Task OnInitializedAsync() => CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _carregando = true;
+        _erro = null;
+        try
+        {
+            var saldoTask = Api.ObterSaldoAsync();
+            var extratoTask = Api.ObterTransacoesAsync(1, 5, null, null, null);
+            await Task.WhenAll(saldoTask, extratoTask);
+            _saldo = await saldoTask;
+            var extrato = await extratoTask;
+            _totalTransacoes = extrato.TotalCount;
+            _transacoesRecentes = extrato.Items;
+        }
+        catch (HttpRequestException ex)
+        {
+            _erro = ex.StatusCode is null
+                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                : ex.Message;
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+}

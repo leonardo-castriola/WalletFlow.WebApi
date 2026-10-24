@@ -1,7 +1,20 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Boas-vindas | Fluxo de Carteira</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="welcome-page">
+    <div class="welcome-mark" aria-hidden="true">WF</div>
+    <p class="eyebrow">FLUXO DE CARTEIRA</p>
+    <h1>Seja bem-vindo à aplicação de “Fluxo de Carteira”</h1>
+    <p class="welcome-copy">Acesse o menu para conferir o saldo ou adicionar novas movimentações.</p>
 
-Welcome to your new app.
+    <div class="welcome-actions">
+        <NavLink class="btn btn-primary" href="/painel">Conferir saldo</NavLink>
+        <NavLink class="btn btn-outline-primary" href="/transacoes/nova">Adicionar movimentação</NavLink>
+    </div>
+
+    <div class="welcome-hint">
+        <span aria-hidden="true">☰</span>
+        <span>Use o menu lateral para navegar pelo painel, extrato e cadastro de movimentações.</span>
+    </div>
+</section>

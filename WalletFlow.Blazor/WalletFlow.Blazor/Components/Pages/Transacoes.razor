@@ -1,0 +1,143 @@
+@page "/transacoes"
+@rendermode InteractiveServer
+@using WalletFlow.Blazor.DTOs
+@using WalletFlow.Blazor.Enums
+@using WalletFlow.Blazor.Services
+@inject TransacaoApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Extrato | WalletFlow</PageTitle>
+
+<div class="dashboard-header">
+    <div>
+        <p class="eyebrow">HISTÓRICO FINANCEIRO</p>
+        <h1>Extrato</h1>
+        <p class="text-secondary">Pesquise e navegue pelas receitas e despesas.</p>
+    </div>
+    <button class="btn btn-primary" @onclick='() => Navigation.NavigateTo("/transacoes/nova")'>＋ Nova transação</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_erro))
+{
+    <div class="alert alert-danger" role="alert">@_erro</div>
+}
+
+<section class="panel transactions-panel">
+    <div class="section-heading">
+        <div><p class="eyebrow">MOVIMENTAÇÕES</p><h2>Transações</h2></div>
+        @if (_resultado is not null) { <span class="result-count">@_resultado.TotalCount registro(s)</span> }
+    </div>
+
+    <form class="filters" @onsubmit="AplicarFiltrosAsync" @onsubmit:preventDefault>
+        <div>
+            <label class="form-label" for="filtro-tipo">Tipo</label>
+            <select id="filtro-tipo" class="form-select" @bind="_tipoFiltro">
+                <option value="">Todos</option><option value="0">Despesas</option><option value="1">Receitas</option>
+            </select>
+        </div>
+        <div><label class="form-label" for="data-inicio">De</label><input id="data-inicio" class="form-control" type="date" value="@_dataInicio" @onchange="e => _dataInicio = e.Value?.ToString() ?? string.Empty" /></div>
+        <div><label class="form-label" for="data-fim">Até</label><input id="data-fim" class="form-control" type="date" value="@_dataFim" @onchange="e => _dataFim = e.Value?.ToString() ?? string.Empty" /></div>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary" disabled="@_carregando">Filtrar</button>
+            <button type="button" class="btn btn-link" @onclick="LimparFiltrosAsync">Limpar</button>
+        </div>
+    </form>
+
+    @if (_carregando)
+    {
+        <p class="empty-state" role="status">Carregando transações...</p>
+    }
+    else if (_resultado is null || _resultado.Items.Count == 0)
+    {
+        <p class="empty-state">Nenhuma transação encontrada para estes filtros.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table transaction-table align-middle">
+                <thead><tr><th>Descrição</th><th>Data</th><th>Tipo</th><th class="text-end">Valor</th></tr></thead>
+                <tbody>
+                    @foreach (var transacao in _resultado.Items)
+                    {
+                        <tr>
+                            <td class="transaction-description">@transacao.Descricao</td>
+                            <td>@transacao.DataCadastro.ToLocalTime().ToString("dd/MM/yyyy", Cultura)</td>
+                            <td><span class="type-pill @(transacao.TipoFormatado == "Receita" ? "income" : "expense")">@transacao.TipoFormatado</span></td>
+                            <td class="text-end transaction-value">@transacao.Valor.ToString("C", Cultura)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-row">
+            <span>Página @_resultado.Page de @_resultado.TotalPages</span>
+            <div class="btn-group" role="group" aria-label="Paginação do extrato">
+                <button class="btn btn-outline-secondary" @onclick="PaginaAnteriorAsync" disabled="@(_pagina <= 1 || _carregando)">Anterior</button>
+                <button class="btn btn-outline-secondary" @onclick="ProximaPaginaAsync" disabled="@(_pagina >= _resultado.TotalPages || _carregando)">Próxima</button>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private static readonly System.Globalization.CultureInfo Cultura = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+    private ResultadoPaginadoDto<TransacaoRespostaDto>? _resultado;
+    private string _tipoFiltro = string.Empty;
+    private string _dataInicio = string.Empty;
+    private string _dataFim = string.Empty;
+    private string? _erro;
+    private bool _carregando = true;
+    private int _pagina = 1;
+    private const int ItensPorPagina = 10;
+
+    protected override Task OnInitializedAsync() => CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _carregando = true;
+        _erro = null;
+        try
+        {
+            var inicio = LerData(_dataInicio, "inicial");
+            var fim = LerData(_dataFim, "final");
+            if (inicio.HasValue && fim.HasValue && inicio.Value > fim.Value)
+                throw new InvalidOperationException("A data inicial deve ser anterior ou igual à data final.");
+
+            var resultado = await Api.ObterTransacoesAsync(_pagina, ItensPorPagina, LerTipoFiltro(), inicio, fim);
+            _resultado = resultado;
+        }
+        catch (HttpRequestException ex)
+        {
+            _erro = ex.StatusCode is null
+                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                : ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _erro = ex.Message;
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private async Task AplicarFiltrosAsync() { _pagina = 1; await CarregarAsync(); }
+    private async Task LimparFiltrosAsync() { _tipoFiltro = _dataInicio = _dataFim = string.Empty; _pagina = 1; await CarregarAsync(); }
+    private async Task PaginaAnteriorAsync() { if (_pagina > 1) { _pagina--; await CarregarAsync(); } }
+    private async Task ProximaPaginaAsync() { if (_resultado is not null && _pagina < _resultado.TotalPages) { _pagina++; await CarregarAsync(); } }
+
+    private TipoTransacao? LerTipoFiltro()
+    {
+        if (string.IsNullOrWhiteSpace(_tipoFiltro)) return null;
+        if (int.TryParse(_tipoFiltro, out var valor) && Enum.IsDefined(typeof(TipoTransacao), valor)) return (TipoTransacao)valor;
+        throw new InvalidOperationException("Selecione um tipo de transação válido.");
+    }
+
+    private static DateOnly? LerData(string valor, string nome)
+    {
+        if (string.IsNullOrWhiteSpace(valor)) return null;
+        if (DateOnly.TryParseExact(valor, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var data)) return data;
+        throw new InvalidOperationException($"Informe uma data {nome} válida.");
+    }
+}

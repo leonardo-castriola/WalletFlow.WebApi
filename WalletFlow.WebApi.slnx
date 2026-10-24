@@ -1,6 +1,6 @@
 <Solution>
-  <Project Path="WalletFlow/WalletFlow.csproj" />
+  <Project Path="WalletFlow.Blazor/WalletFlow.Blazor.Client/WalletFlow.Blazor.Client.csproj" Id="4e68212b-c169-4c6c-a887-a2efdec75d96" />
+  <Project Path="WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj" Id="4357c4ae-1784-49ee-80a9-c2a668b8e79e" />
   <Project Path="WalletFlow.Tests/WalletFlow.Tests.csproj" />
-  <Project Path="WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj" />
-  <Project Path="WalletFlow.Blazor/WalletFlow.Blazor.Client/WalletFlow.Blazor.Client.csproj" />
+  <Project Path="WalletFlow/WalletFlow.csproj" />
 </Solution>

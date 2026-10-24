@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "WalletFlow (API + Frontend)",
+    "Projects": [
+      {
+        "Path": "WalletFlow/WalletFlow.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

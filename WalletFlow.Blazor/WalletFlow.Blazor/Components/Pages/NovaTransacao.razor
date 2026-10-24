@@ -1,0 +1,117 @@
+@page "/transacoes/nova"
+@using System.ComponentModel.DataAnnotations
+@using WalletFlow.Blazor.DTOs
+@using WalletFlow.Blazor.Enums
+@using WalletFlow.Blazor.Services
+@inject TransacaoApiClient Api
+@inject ILogger<NovaTransacao> Logger
+
+<PageTitle>Nova transação | WalletFlow</PageTitle>
+
+<div class="dashboard-header">
+    <div><p class="eyebrow">MOVIMENTAÇÃO FINANCEIRA</p><h1>Nova transação</h1><p class="text-secondary">Registre uma receita ou despesa na sua carteira.</p></div>
+    <a class="btn btn-outline-secondary" href="/transacoes">Voltar ao extrato</a>
+</div>
+
+<section class="panel form-panel">
+    @if (!string.IsNullOrWhiteSpace(_erro)) { <div class="alert alert-danger" role="alert">@_erro</div> }
+    <div class="@(!string.IsNullOrWhiteSpace(_mensagemSucesso) ? "alert alert-success alert-dismissible success-message" : "d-none")" role="status" aria-live="polite">
+        <span>@_mensagemSucesso</span>
+        <EditForm Model="_controleFormulario" FormName="fechar-sucesso" Enhance OnValidSubmit="FecharMensagemSucesso">
+            @if (!string.IsNullOrWhiteSpace(_mensagemSucesso))
+            {
+                <button type="submit" class="btn-close" aria-label="Fechar mensagem"></button>
+            }
+        </EditForm>
+    </div>
+    <EditForm @key="_modelo" Model="_modelo" FormName="cadastro-transacao" Enhance OnValidSubmit="SalvarAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="validation-summary" />
+        <div class="mb-3">
+            <label class="form-label" for="descricao">Descrição</label>
+            <InputText id="descricao" class="form-control" @bind-Value="_modelo!.Descricao" maxlength="100" placeholder="Ex.: conta de luz, salário" disabled="@_salvo" />
+            <ValidationMessage For="@(() => _modelo!.Descricao)" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="valor">Valor</label>
+            <InputNumber id="valor" class="form-control" @bind-Value="_modelo!.Valor" min="0.01" max="99999999.99" step="0.01" disabled="@_salvo" />
+            <ValidationMessage For="@(() => _modelo!.Valor)" />
+        </div>
+        <div class="mb-4">
+            <label class="form-label" for="tipo">Tipo</label>
+            <InputSelect id="tipo" class="form-select" @bind-Value="_modelo!.Tipo" disabled="@_salvo">
+                <option value="">Selecione o tipo</option>
+                <option value="0">Despesa</option>
+                <option value="1">Receita</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => _modelo!.Tipo)" />
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@(_salvando || _salvo)">@(_salvando ? "Salvando..." : "Salvar transação")</button>
+        </div>
+    </EditForm>
+    <EditForm Model="_controleFormulario" FormName="cancelar-transacao" Enhance OnValidSubmit="Cancelar">
+        <div class="form-cancel-actions">
+            <button type="submit" class="btn btn-outline-secondary" disabled="@_salvando">Cancelar</button>
+        </div>
+    </EditForm>
+</section>
+
+@code {
+    [SupplyParameterFromForm(FormName = "cadastro-transacao")]
+    private TransacaoCriacaoDto? _modelo { get; set; }
+
+    private readonly FormAction _controleFormulario = new();
+    private string? _erro;
+    private string? _mensagemSucesso;
+    private bool _salvando;
+    private bool _salvo;
+
+    protected override void OnInitialized()
+    {
+        _modelo ??= new TransacaoCriacaoDto();
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando)
+            return;
+
+        _salvando = true;
+        _erro = null;
+        _mensagemSucesso = null;
+        try
+        {
+            await Api.CriarTransacaoAsync(_modelo!);
+            _salvo = true;
+            _mensagemSucesso = "Transação gravada com sucesso!";
+        }
+        catch (HttpRequestException ex)
+        {
+            _erro = ex.StatusCode is null
+                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                : ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao cadastrar uma transação pelo formulário Blazor.");
+            _erro = "Não foi possível salvar a transação. Seus dados foram mantidos para uma nova tentativa.";
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private void Cancelar()
+    {
+        _modelo = new TransacaoCriacaoDto();
+        _erro = null;
+        _mensagemSucesso = null;
+        _salvo = false;
+    }
+
+    private void FecharMensagemSucesso() => Cancelar();
+
+    private sealed class FormAction { }
+}
