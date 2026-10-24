@@ -1,8 +1,8 @@
+
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using WalletFlow.WebApi.Data;
 using WalletFlow.WebApi.Security;
 using WalletFlow.WebApi.Services;
@@ -15,18 +15,27 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configuração da API Key
 var apiKey = builder.Configuration["Authentication:ApiKey"];
-if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(apiKey))
+
+if (!builder.Environment.IsDevelopment() &&
+    string.IsNullOrWhiteSpace(apiKey))
 {
     throw new InvalidOperationException(
-        "Configure a chave da API na variável de ambiente Authentication__ApiKey antes de iniciar fora de Development.");
+        "Configure a chave da API na variável de ambiente " +
+        "Authentication__ApiKey antes de iniciar fora de Development.");
 }
 
+// Autenticação
 builder.Services
     .AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
-    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+    .AddScheme<
+        Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
+        ApiKeyAuthenticationHandler>(
         ApiKeyAuthenticationHandler.SchemeName,
         _ => { });
+
+// Autorização: exige autenticação por padrão
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
@@ -34,42 +43,61 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// EF Core com SQLite
+// Entity Framework Core com SQLite
 builder.Services.AddDbContext<WalletDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Nosso serviço financeiro
+// Serviço financeiro
 builder.Services.AddScoped<IFinanceiroService, FinanceiroService>();
 
+// 2. CONSTRUÇÃO DA APLICAÇÃO
 var app = builder.Build();
 
-// Cria ou atualiza o banco usando as migrações do Entity Framework.
+// Aplica as migrações do banco de dados
 await using (var scope = app.Services.CreateAsyncScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<WalletDbContext>();
+    var dbContext = scope.ServiceProvider
+        .GetRequiredService<WalletDbContext>();
+
     await dbContext.Database.MigrateAsync();
 }
 
-// 2. PIPELINE DE REQUISIÇÕES (Middlewares)
+// 3. PIPELINE DE REQUISIÇÕES
+
+// Tratamento global de exceções
 app.UseMiddleware<GlobalExceptionMiddleware>();
+
+// Swagger somente em Development
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.RoutePrefix = "swagger");
 }
 
-// Força a cultura invariante internacional (evita problemas com ponto/vírgula no JSON)
-var supportedCultures = new[] { CultureInfo.InvariantCulture };
+// Cultura invariante
+var supportedCultures = new[]
+{
+    CultureInfo.InvariantCulture
+};
+
 app.UseRequestLocalization(new RequestLocalizationOptions
 {
-    DefaultRequestCulture = new RequestCulture(CultureInfo.InvariantCulture),
+    DefaultRequestCulture =
+        new RequestCulture(CultureInfo.InvariantCulture),
+
     SupportedCultures = supportedCultures,
     SupportedUICultures = supportedCultures
 });
 
+// HTTPS
 app.UseHttpsRedirection();
+
+// Autenticação e autorização
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Controllers
 app.MapControllers();
 
 app.Run();

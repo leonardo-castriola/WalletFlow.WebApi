@@ -77,7 +77,7 @@ namespace WalletFlow.WebApi.Controllers
             var totalCount = await _context.Transacoes.CountAsync(cancellationToken);
             var transacoes = await _context.Transacoes
                 .AsNoTracking()
-                .OrderBy(t => t.Id)
+                .OrderByDescending(t => t.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
@@ -131,7 +131,7 @@ namespace WalletFlow.WebApi.Controllers
                 query = query.Where(t => t.Tipo == tipo.Value);
 
             var totalCount = await query.CountAsync(cancellationToken);
-            var items = await query.OrderBy(t => t.Id)
+            var items = await query.OrderByDescending(t => t.Id)
                 .Skip((int)((long)(page - 1) * pageSize)).Take(pageSize)
                 .Select(t => new TransacaoRespostaDto
                 {

@@ -14,7 +14,7 @@ namespace WalletFlow.Tests;
 public sealed class ApiBehaviorTests
 {
     [Fact]
-    public async Task FiltrosSaoAplicadosAntesDaPaginacao()
+    public async Task FiltrosSaoAplicadosAntesDaPaginacaoEOrdenadosDoMaisNovo()
     {
         await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -37,7 +37,13 @@ public sealed class ApiBehaviorTests
         Assert.Equal(2, page.TotalCount);
         Assert.Equal(2, page.TotalPages);
         Assert.Single(page.Items);
-        Assert.Equal("Receita 2", page.Items[0].Descricao);
+        Assert.Equal("Receita 1", page.Items[0].Descricao);
+
+        var primeiraPaginaAction = await controller.ObterFiltrado(
+            TipoTransacao.Receita, data, data.AddDays(3), page: 1, pageSize: 1);
+        var primeiraPaginaResult = Assert.IsType<OkObjectResult>(primeiraPaginaAction.Result);
+        var primeiraPagina = Assert.IsType<WalletFlow.WebApi.DTOs.ResultadoPaginadoDto<WalletFlow.WebApi.DTOs.TransacaoRespostaDto>>(primeiraPaginaResult.Value);
+        Assert.Equal("Receita 2", Assert.Single(primeiraPagina.Items).Descricao);
     }
 
     [Fact]

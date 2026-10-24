@@ -9,7 +9,7 @@ namespace WalletFlow.WebApi.DTOs
         [StringLength(100, ErrorMessage = "A descrição não pode passar de 100 caracteres.")]
         public string Descricao { get; set; } = string.Empty;
 
-        [Range(typeof(decimal), "0.01", "99999999.99", ErrorMessage = "O valor deve ser maior que zero.")]
+        [Range(typeof(decimal), "0.01", "99999999.99", ErrorMessage = "O valor deve ser maior que zero.", ParseLimitsInInvariantCulture = true)]
         public decimal Valor { get; set; }
 
         [Required(ErrorMessage = "O tipo de transação é obrigatório.")]
