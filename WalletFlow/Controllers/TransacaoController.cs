@@ -9,6 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Globalization;
+using Microsoft.Data.Sqlite;
+using WalletFlow.WebApi.Enums;
 
 namespace WalletFlow.WebApi.Controllers
 {
@@ -92,6 +95,56 @@ namespace WalletFlow.WebApi.Controllers
             return Ok(new ResultadoPaginadoDto<TransacaoRespostaDto>
             {
                 Items = listaDtos,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            });
+        }
+
+        // GET: api/transacao/filtro — os filtros são aplicados antes da paginação.
+        [HttpGet("filtro")]
+        public async Task<ActionResult<ResultadoPaginadoDto<TransacaoRespostaDto>>> ObterFiltrado(
+            [FromQuery] TipoTransacao? tipo = null,
+            [FromQuery] DateTimeOffset? dataInicio = null,
+            [FromQuery] DateTimeOffset? dataFim = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            CancellationToken cancellationToken = default)
+        {
+            if (page < 1 || pageSize < 1 || pageSize > 100 || (long)(page - 1) * pageSize > int.MaxValue)
+                return BadRequest("Informe page maior que zero e pageSize entre 1 e 100.");
+            if (tipo.HasValue && !Enum.IsDefined(tipo.Value))
+                return BadRequest("Tipo deve ser 0 (Despesa) ou 1 (Receita).");
+            if (dataInicio.HasValue && dataFim.HasValue && dataInicio > dataFim)
+                return BadRequest("dataInicio deve ser anterior ou igual a dataFim.");
+
+            // SQLite armazena DateTimeOffset como texto e não suporta comparações EF nessa coluna.
+            // julianday compara os instantes no banco sem materializar o histórico.
+            var inicio = dataInicio?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+            var fim = dataFim?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+            var query = _context.Transacoes.FromSqlRaw(
+                "SELECT * FROM \"Transacoes\" WHERE (@inicio IS NULL OR julianday(\"DataCadastro\") >= julianday(@inicio)) AND (@fim IS NULL OR julianday(\"DataCadastro\") <= julianday(@fim))",
+                new SqliteParameter("@inicio", (object?)inicio ?? DBNull.Value),
+                new SqliteParameter("@fim", (object?)fim ?? DBNull.Value)).AsNoTracking();
+            if (tipo.HasValue)
+                query = query.Where(t => t.Tipo == tipo.Value);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+            var items = await query.OrderBy(t => t.Id)
+                .Skip((int)((long)(page - 1) * pageSize)).Take(pageSize)
+                .Select(t => new TransacaoRespostaDto
+                {
+                    Id = t.Id,
+                    Descricao = t.Descricao,
+                    Valor = t.Valor,
+                    TipoFormatado = t.Tipo.ToString(),
+                    DataCadastro = t.DataCadastro
+                }).ToListAsync(cancellationToken);
+
+            return Ok(new ResultadoPaginadoDto<TransacaoRespostaDto>
+            {
+                Items = items,
                 Page = page,
                 PageSize = pageSize,
                 TotalCount = totalCount,

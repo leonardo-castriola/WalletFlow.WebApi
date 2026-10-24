@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using WalletFlow.WebApi.Data;
 using WalletFlow.WebApi.Security;
 using WalletFlow.WebApi.Services;
+using WalletFlow.WebApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +51,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 // 2. PIPELINE DE REQUISIÇÕES (Middlewares)
+app.UseMiddleware<GlobalExceptionMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

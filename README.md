@@ -1,37 +1,43 @@
 # WalletFlow.WebApi
 
-![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
-![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-Web%20API-512BD4?logo=dotnet&logoColor=white)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
+![C#](https://img.shields.io/badge/Language-C%23-239120?logo=csharp&logoColor=white)
+![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
+![xUnit](https://img.shields.io/badge/Tests-xUnit-512BD4)
 
-> API REST para registrar receitas e despesas, consultar movimentações e calcular o saldo consolidado de uma carteira.
+> API REST para registrar receitas e despesas, consultar o extrato e calcular automaticamente o saldo de uma carteira.
 
-## Sobre o projeto
+## Visão geral
 
-O WalletFlow.WebApi é uma API de exemplo para controle de movimentações financeiras. Os registros são persistidos em SQLite, e o Entity Framework Core aplica as migrações durante a inicialização.
+O WalletFlow.WebApi organiza movimentações financeiras em receitas e despesas usando uma API REST com persistência SQLite. O saldo é calculado a partir das transações salvas. O extrato pode ser consultado por páginas e filtrado por tipo e período, para evitar carregar todo o histórico de uma vez.
 
 ## Funcionalidades
 
-- Cadastro de despesas e receitas.
-- Consulta de uma movimentação pelo ID.
-- Listagem paginada, com até 100 itens por página.
-- Cálculo do saldo consolidado.
+- Cadastro e consulta de transações.
+- Extrato paginado, com limite de 100 itens por página.
+- Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
+- Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
+- Migrações do Entity Framework Core aplicadas durante a inicialização.
+- Middleware global que registra exceções no servidor e responde com um erro seguro.
 - Autenticação por chave de API fora do ambiente de desenvolvimento.
-- Documentação interativa com Swagger em desenvolvimento.
+- Documentação interativa pelo Swagger em desenvolvimento.
 
 ## Tecnologias
 
 - C# e .NET 10
 - ASP.NET Core Web API
-- Entity Framework Core
+- Entity Framework Core 10
 - SQLite
-- Swashbuckle / Swagger
+- Swagger / Swashbuckle
+- xUnit
 
 ## Pré-requisitos
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- .NET 10 SDK
+- Visual Studio com suporte ao .NET 10 (opcional)
 - Git
 
-Confira a instalação do SDK:
+Confira o SDK instalado:
 
 ```bash
 dotnet --version
@@ -39,64 +45,111 @@ dotnet --version
 
 ## Instalação e execução
 
+Clone o repositório e restaure os projetos:
+
 ```bash
 git clone https://github.com/leonardo-castriola/WalletFlow.WebApi.git
 cd WalletFlow.WebApi
-dotnet restore WalletFlow/WalletFlow.csproj
+dotnet restore WalletFlow.WebApi.slnx
+```
+
+### Visual Studio
+
+1. Abra `WalletFlow.WebApi.slnx` no Visual Studio.
+2. Selecione o perfil `http` ou `https` da API como projeto de inicialização.
+3. Pressione `F5` ou `Ctrl+F5`. O perfil de desenvolvimento abre o Swagger.
+4. Na primeira inicialização, a aplicação cria/atualiza o banco SQLite usando as migrações incluídas.
+
+Também é possível aplicar as migrações pela Package Manager Console do Visual Studio:
+
+```powershell
+Update-Database -Project WalletFlow -StartupProject WalletFlow
+```
+
+### Terminal
+
+```bash
+dotnet build WalletFlow.WebApi.slnx
+dotnet test WalletFlow.WebApi.slnx
 dotnet run --project WalletFlow/WalletFlow.csproj
 ```
 
-No perfil local de desenvolvimento, a aplicação usa `http://localhost:5250` e abre o Swagger no navegador. A interface está em `/swagger` e só fica disponível em desenvolvimento. O perfil HTTPS usa `https://localhost:7013`.
-
-O banco SQLite `Wallet.db` fica na pasta `WalletFlow/` e é criado ou atualizado pelas migrações do Entity Framework na inicialização.
+Com o perfil local, abra [http://localhost:5250/swagger](http://localhost:5250/swagger). O banco `Wallet.db` é criado no diretório de conteúdo da aplicação. O arquivo é local e ignorado pelo Git.
 
 ## Autenticação
 
-Em desenvolvimento, as rotas podem ser usadas sem chave. Fora de `Development`, configure uma chave forte pela variável de ambiente `Authentication__ApiKey`. Não inclua a chave no repositório.
+Em `Development`, as rotas podem ser usadas sem chave. Nos outros ambientes, configure uma chave forte pela variável de ambiente `Authentication__ApiKey`; nunca coloque a chave no repositório.
 
-Exemplo para iniciar em produção no Bash:
+Exemplo no PowerShell:
 
-```bash
-export ASPNETCORE_ENVIRONMENT=Production
-export Authentication__ApiKey='substitua-por-uma-chave-forte'
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = 'Production'
+$env:Authentication__ApiKey = 'substitua-por-uma-chave-forte'
 dotnet run --project WalletFlow/WalletFlow.csproj --no-launch-profile
 ```
 
-Envie a chave no cabeçalho `X-API-Key` em cada requisição. Sem uma chave configurada, a aplicação não inicia fora de desenvolvimento.
+Envie a chave no cabeçalho `X-API-Key` em cada requisição.
 
 ## Como usar
 
-Com a API em execução localmente, abra [http://localhost:5250/swagger](http://localhost:5250/swagger) para explorar as rotas.
+Explore e execute as operações em [Swagger](http://localhost:5250/swagger). O campo `tipo` usa `0` para despesa e `1` para receita.
 
-| Método | Rota | Descrição |
+| Método | Rota | O que faz |
 | --- | --- | --- |
-| `POST` | `/api/transacao` | Cadastra uma movimentação |
-| `GET` | `/api/transacao?page=1&pageSize=50` | Lista movimentações paginadas |
-| `GET` | `/api/transacao/{id}` | Consulta uma movimentação pelo ID |
-| `GET` | `/api/transacao/saldo` | Retorna o saldo consolidado |
+| `POST` | `/api/Transacao` | Cadastra uma transação |
+| `GET` | `/api/Transacao?page=1&pageSize=50` | Lista transações com paginação |
+| `GET` | `/api/Transacao/filtro?tipo=1&dataInicio=2026-10-01T00:00:00Z&dataFim=2026-10-31T23:59:59Z&page=1&pageSize=10` | Filtra por tipo e período, mantendo a paginação |
+| `GET` | `/api/Transacao/{id}` | Consulta uma transação pelo ID |
+| `GET` | `/api/Transacao/saldo` | Retorna o saldo consolidado |
 
-No cadastro, use `tipo: 0` para despesa e `tipo: 1` para receita:
+Exemplo de cadastro:
 
 ```bash
-curl -X POST http://localhost:5250/api/transacao \
+curl -X POST http://localhost:5250/api/Transacao \
   -H "Content-Type: application/json" \
   -d '{"descricao":"Salário","valor":3500.00,"tipo":1}'
 ```
 
-A listagem aceita `page` (padrão `1`) e `pageSize` (padrão `50`, máximo `100`). A resposta inclui `items`, `page`, `pageSize`, `totalCount` e `totalPages`.
+Na listagem, `page` começa em `1`; `pageSize` aceita valores de `1` a `100` e, por padrão, é `50`. O filtro aceita qualquer combinação de `tipo`, `dataInicio` e `dataFim`. As datas devem seguir ISO 8601; quando ambas são informadas, `dataInicio` precisa ser anterior ou igual a `dataFim`. A resposta paginada contém `items`, `page`, `pageSize`, `totalCount` e `totalPages`.
 
-Em produção, acrescente a chave à requisição:
+## Swagger em execução
+
+As imagens abaixo foram capturadas na interface Swagger local, com a aplicação executando e respostas reais dos endpoints. A demonstração usa um banco temporário separado do banco local do projeto.
+
+### Cadastro — `POST /api/Transacao`
+
+![Swagger executando o cadastro de uma receita e retornando HTTP 201](docs/screenshots/swagger-post-transacao.jpg)
+
+### Extrato paginado — `GET /api/Transacao`
+
+![Swagger listando transações paginadas](docs/screenshots/swagger-get-transacoes.jpg)
+
+### Filtro por tipo, período e página — `GET /api/Transacao/filtro`
+
+![Swagger retornando as transações após aplicar os filtros e a paginação](docs/screenshots/swagger-get-filtro.jpg)
+
+### Consulta por ID — `GET /api/Transacao/{id}`
+
+![Swagger retornando uma transação pelo ID](docs/screenshots/swagger-get-transacao-id.jpg)
+
+### Saldo — `GET /api/Transacao/saldo`
+
+![Swagger calculando o saldo consolidado](docs/screenshots/swagger-get-saldo.jpg)
+
+## Testes
+
+Os testes xUnit verificam o saldo com banco vazio e com saldo negativo, as validações de valores, a aplicação dos filtros antes da paginação e a resposta segura do middleware de exceções.
 
 ```bash
-curl http://localhost:5250/api/transacao/saldo \
-  -H "X-API-Key: sua-chave-forte"
+dotnet test WalletFlow.WebApi.slnx
 ```
 
 ## Como contribuir
 
 1. Crie uma branch para sua alteração.
-2. Faça uma mudança pequena e focada, usando commits atômicos com mensagens no padrão Conventional Commits, por exemplo `feat: adiciona filtro por período`.
-3. Abra um Pull Request explicando a alteração e como ela foi verificada.
+2. Faça alterações focadas e commits atômicos com mensagens Conventional Commits, por exemplo `feat: adiciona filtro por período`.
+3. Execute `dotnet build WalletFlow.WebApi.slnx` e `dotnet test WalletFlow.WebApi.slnx`.
+4. Abra um Pull Request explicando a mudança e como ela foi verificada.
 
 ## Licença
 
