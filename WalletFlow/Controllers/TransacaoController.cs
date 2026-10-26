@@ -69,7 +69,7 @@ namespace WalletFlow.WebApi.Controllers
             [FromQuery] int pageSize = 50,
             CancellationToken cancellationToken = default)
         {
-            if (page < 1 || pageSize < 1 || pageSize > 100)
+            if (page < 1 || pageSize < 1 || pageSize > 100 || (long)(page - 1) * pageSize > int.MaxValue)
             {
                 return BadRequest("Informe page maior que zero e pageSize entre 1 e 100.");
             }
@@ -78,7 +78,7 @@ namespace WalletFlow.WebApi.Controllers
             var transacoes = await _context.Transacoes
                 .AsNoTracking()
                 .OrderByDescending(t => t.Id)
-                .Skip((page - 1) * pageSize)
+                .Skip((int)((long)(page - 1) * pageSize))
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 

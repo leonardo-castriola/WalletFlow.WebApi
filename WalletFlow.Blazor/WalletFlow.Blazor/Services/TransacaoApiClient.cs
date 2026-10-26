@@ -6,8 +6,10 @@ using WalletFlow.Blazor.Enums;
 
 namespace WalletFlow.Blazor.Services;
 
-public sealed class TransacaoApiClient(HttpClient httpClient)
+public sealed class TransacaoApiClient(HttpClient httpClient, IConfiguration configuration)
 {
+    private readonly TimeZoneInfo _timeZone = TimeZoneInfo.FindSystemTimeZoneById(
+        configuration["Filters:TimeZoneId"] ?? "America/Sao_Paulo");
     public async Task<ResultadoPaginadoDto<TransacaoRespostaDto>> ObterTransacoesAsync(
         int page,
         int pageSize,
@@ -25,9 +27,9 @@ public sealed class TransacaoApiClient(HttpClient httpClient)
         if (tipo.HasValue)
             parametros.Add($"tipo={(int)tipo.Value}");
         if (dataInicio.HasValue)
-            parametros.Add($"dataInicio={Uri.EscapeDataString(InicioDoDiaUtc(dataInicio.Value))}");
+            parametros.Add($"dataInicio={Uri.EscapeDataString(InicioDoDiaUtc(dataInicio.Value, _timeZone))}");
         if (dataFim.HasValue)
-            parametros.Add($"dataFim={Uri.EscapeDataString(FimDoDiaUtc(dataFim.Value))}");
+            parametros.Add($"dataFim={Uri.EscapeDataString(FimDoDiaUtc(dataFim.Value, _timeZone))}");
 
         var caminho = tipo.HasValue || dataInicio.HasValue || dataFim.HasValue
             ? "api/Transacao/filtro"
@@ -66,11 +68,15 @@ public sealed class TransacaoApiClient(HttpClient httpClient)
                ?? throw new InvalidOperationException("A API não retornou o saldo consolidado.");
     }
 
-    private static string InicioDoDiaUtc(DateOnly data) =>
-        new DateTimeOffset(data.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToString("O", CultureInfo.InvariantCulture);
+    private static string InicioDoDiaUtc(DateOnly data, TimeZoneInfo timeZone) =>
+        new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(
+            data.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), timeZone), TimeSpan.Zero)
+        .ToString("O", CultureInfo.InvariantCulture);
 
-    private static string FimDoDiaUtc(DateOnly data) =>
-        new DateTimeOffset(data.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc)).ToString("O", CultureInfo.InvariantCulture);
+    private static string FimDoDiaUtc(DateOnly data, TimeZoneInfo timeZone) =>
+        new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(
+            data.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Unspecified), timeZone), TimeSpan.Zero)
+        .ToString("O", CultureInfo.InvariantCulture);
 
     private static async Task GarantirSucessoAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
