@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using WalletFlow.WebApi.Enums;
+using System.Security.Claims;
 
 namespace WalletFlow.WebApi.Controllers
 {
@@ -22,6 +23,8 @@ namespace WalletFlow.WebApi.Controllers
     {
         private readonly WalletDbContext _context;
         private readonly IFinanceiroService _financeiroService;
+        private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException("A requisição não contém um usuário autenticado.");
 
         // Injeção de dependência do Banco e do Serviço de Regra de Negócio
         public TransacaoController(WalletDbContext context, IFinanceiroService financeiroService)
@@ -39,6 +42,7 @@ namespace WalletFlow.WebApi.Controllers
             // Mapeamento: DTO de Entrada -> Entidade de Banco
             var novaTransacao = new Transacao
             {
+                UserId = CurrentUserId,
                 Descricao = dto.Descricao,
                 Valor = dto.Valor,
                 Tipo = dto.Tipo!.Value,
@@ -74,8 +78,10 @@ namespace WalletFlow.WebApi.Controllers
                 return BadRequest("Informe page maior que zero e pageSize entre 1 e 100.");
             }
 
-            var totalCount = await _context.Transacoes.CountAsync(cancellationToken);
-            var transacoes = await _context.Transacoes
+            var userId = CurrentUserId;
+            var userTransactions = _context.Transacoes.Where(t => t.UserId == userId);
+            var totalCount = await userTransactions.CountAsync(cancellationToken);
+            var transacoes = await userTransactions
                 .AsNoTracking()
                 .OrderByDescending(t => t.Id)
                 .Skip((int)((long)(page - 1) * pageSize))
@@ -123,10 +129,12 @@ namespace WalletFlow.WebApi.Controllers
             // julianday compara os instantes no banco sem materializar o histórico.
             var inicio = dataInicio?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
             var fim = dataFim?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+            var userId = CurrentUserId;
             var query = _context.Transacoes.FromSqlRaw(
                 "SELECT * FROM \"Transacoes\" WHERE (@inicio IS NULL OR julianday(\"DataCadastro\") >= julianday(@inicio)) AND (@fim IS NULL OR julianday(\"DataCadastro\") <= julianday(@fim))",
                 new SqliteParameter("@inicio", (object?)inicio ?? DBNull.Value),
-                new SqliteParameter("@fim", (object?)fim ?? DBNull.Value)).AsNoTracking();
+                new SqliteParameter("@fim", (object?)fim ?? DBNull.Value)).AsNoTracking()
+                .Where(t => t.UserId == userId);
             if (tipo.HasValue)
                 query = query.Where(t => t.Tipo == tipo.Value);
 
@@ -158,7 +166,7 @@ namespace WalletFlow.WebApi.Controllers
         {
             var transacao = await _context.Transacoes
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == CurrentUserId, cancellationToken);
 
             if (transacao == null)
             {
@@ -181,7 +189,7 @@ namespace WalletFlow.WebApi.Controllers
         [HttpGet("saldo")]
         public async Task<ActionResult<decimal>> ObterSaldoConsolidado(CancellationToken cancellationToken)
         {
-            decimal saldoAtual = await _financeiroService.CalcularSaldoConsolidadoAsync(cancellationToken);
+            decimal saldoAtual = await _financeiroService.CalcularSaldoConsolidadoAsync(CurrentUserId, cancellationToken);
             return Ok(new { saldoConsolidado = saldoAtual });
         }
     }

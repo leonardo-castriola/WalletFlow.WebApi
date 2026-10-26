@@ -1,0 +1,5 @@
+.logout-page { display: grid; min-height: min(68vh, 650px); place-items: center; padding: 1.5rem; }
+.logout-card { background: #fff; border: 1px solid var(--wf-line); border-radius: var(--wf-radius-lg); box-shadow: var(--wf-shadow-card); max-width: 460px; padding: clamp(1.5rem, 4vw, 2.5rem); width: 100%; }
+.logout-card h1 { font-size: 1.8rem; margin: 0 0 .5rem; }
+.logout-card > p:not(.eyebrow) { color: var(--wf-muted); margin-bottom: 1.5rem; }
+.logout-card form { display: flex; flex-wrap: wrap; gap: .65rem; }

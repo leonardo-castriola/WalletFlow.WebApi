@@ -23,6 +23,8 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Autenticação por chave de API fora do ambiente de desenvolvimento.
 - Documentação interativa pelo Swagger em desenvolvimento.
 - Interface web Blazor com página inicial, painel de saldo, extrato e cadastro de transações integrado à API.
+- Tela de login responsiva na rota `/`, com validação, alternância de visibilidade da senha e atalhos para cadastro e recuperação.
+- Cadastro com confirmação de e-mail, recuperação de senha e proteção das rotas financeiras pelo ASP.NET Core Identity.
 - Filtros de tipo e período no extrato, preservando paginação e ordenação das movimentações mais recentes.
 - Validação do formulário, confirmação após o cadastro e opção de cancelar sem persistir os dados.
 
@@ -80,7 +82,7 @@ No Visual Studio, também é possível iniciar API e frontend simultaneamente us
 
 1. Abra `WalletFlow.WebApi.slnx` no Visual Studio.
 2. Inicie os projetos `WalletFlow` e `WalletFlow.Blazor` simultaneamente, ou selecione a configuração `WalletFlow.WebApi.slnLaunch`.
-3. Pressione `F5` ou `Ctrl+F5`. A API abre o Swagger e o frontend Blazor abre em uma janela própria.
+3. Pressione `Ctrl+F5` para iniciar sem conectar o depurador JavaScript do navegador. O perfil compartilhado abre o Swagger em `http://localhost:5250/swagger` e o login Blazor em `http://localhost:5087/`.
 4. Na primeira inicialização, a API cria/atualiza o banco SQLite usando as migrações incluídas.
 
 Também é possível aplicar as migrações pela Package Manager Console do Visual Studio:
@@ -101,7 +103,27 @@ Com o perfil local, abra [http://localhost:5250/swagger](http://localhost:5250/s
 
 ## Autenticação
 
-Em `Development`, as rotas podem ser usadas sem chave. Nos outros ambientes, configure uma chave forte pela variável de ambiente `Authentication__ApiKey`; nunca coloque a chave no repositório.
+O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro exige confirmação do e-mail; as senhas seguem a política do Identity (mínimo de 12 caracteres, letras maiúsculas e minúsculas, número e símbolo), com bloqueio temporário após cinco tentativas inválidas. A sessão é HttpOnly, SameSite=Lax, dura oito horas e é revalidada no circuito Blazor.
+
+As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimento, o host Blazor e a API já apontam para `WalletFlow/Wallet.db`. Em produção, configure o mesmo caminho absoluto em `ConnectionStrings__DefaultConnection` para os dois processos. As migrações são aplicadas na inicialização. Transações preexistentes ficam sem proprietário e não aparecem para nenhuma conta até serem associadas por um processo administrativo.
+
+O host Blazor deriva o ID do usuário da sessão autenticada e envia esse ID à API em uma chamada servidor-a-servidor. A API valida a conta e filtra listagem, busca por ID e saldo pelo proprietário. Em produção, mantenha a chave de serviço em `Authentication__ApiKey` nos dois processos; ela nunca é enviada pelo navegador. O Blazor e a API devem usar HTTPS.
+
+Para confirmação e recuperação de senha, configure SMTP no host Blazor. Tokens de confirmação e redefinição expiram após uma hora. Configure estes valores por variáveis de ambiente ou por um gerenciador de segredos; não grave credenciais no repositório:
+
+```text
+Identity__PublicBaseUrl=https://wallet.exemplo.com
+Email__Smtp__Host=smtp.exemplo.com
+Email__Smtp__Port=587
+Email__Smtp__Username=...
+Email__Smtp__Password=...
+Email__Smtp__From=nao-responda@exemplo.com
+Email__Smtp__ImplicitTls=false
+ConnectionStrings__DefaultConnection=Data Source=/caminho/compartilhado/Wallet.db
+Authentication__ApiKey=<mesma chave forte no host Blazor e na API>
+```
+
+Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. Configure SMTP local para concluir cadastro e recuperação. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
 
 Exemplo no PowerShell:
 
@@ -111,25 +133,29 @@ $env:Authentication__ApiKey = 'substitua-por-uma-chave-forte'
 dotnet run --project WalletFlow/WalletFlow.csproj --no-launch-profile
 ```
 
-Envie a chave no cabeçalho `X-API-Key` em cada requisição.
+O host Blazor inclui `X-API-Key` e `X-User-ID` nas chamadas servidor-a-servidor. Não coloque a chave de API no cliente ou no navegador.
 
 ## Como usar
 
-Explore e execute as operações em [Swagger](http://localhost:5250/swagger). O campo `tipo` usa `0` para despesa e `1` para receita.
+O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas diretas de desenvolvimento, envie `X-User-ID` com o ID de uma conta existente; fora de `Development`, envie também a chave de serviço `X-API-Key`. O cabeçalho de usuário deve ser definido por um serviço confiável, nunca por um cliente público. O campo `tipo` usa `0` para despesa e `1` para receita.
 
 | Método | Rota | O que faz |
 | --- | --- | --- |
-| `POST` | `/api/Transacao` | Cadastra uma transação |
-| `GET` | `/api/Transacao?page=1&pageSize=50` | Lista transações com paginação |
-| `GET` | `/api/Transacao/filtro?tipo=1&dataInicio=2026-10-01T00:00:00Z&dataFim=2026-10-31T23:59:59Z&page=1&pageSize=10` | Filtra por tipo e período, mantendo a paginação |
-| `GET` | `/api/Transacao/{id}` | Consulta uma transação pelo ID |
-| `GET` | `/api/Transacao/saldo` | Retorna o saldo consolidado |
+| `POST` | `/api/Transacao` | Cadastra uma transação para o usuário autenticado |
+| `GET` | `/api/Transacao?page=1&pageSize=50` | Lista as transações do usuário com paginação |
+| `GET` | `/api/Transacao/filtro?...` | Filtra as transações do usuário por tipo e período |
+| `GET` | `/api/Transacao/{id}` | Consulta uma transação do próprio usuário |
+| `GET` | `/api/Transacao/saldo` | Retorna o saldo do próprio usuário |
 
 ### Interface Blazor
 
 | Página | Rota | O que permite fazer |
 | --- | --- | --- |
-| Início | `/` | Acessar o painel ou iniciar um cadastro |
+| Entrar | `/` | Entrar com e-mail e senha |
+| Criar conta | `/criar-conta` | Cadastrar e confirmar o endereço de e-mail |
+| Recuperar senha | `/esqueci-a-senha` | Solicitar link de redefinição por e-mail |
+| Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
+| Início autenticado | `/inicio` | Acessar o painel ou o extrato |
 | Painel financeiro | `/painel` | Consultar saldo e movimentações recentes |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
@@ -141,6 +167,7 @@ Exemplo de cadastro:
 ```bash
 curl -X POST http://localhost:5250/api/Transacao \
   -H "Content-Type: application/json" \
+  -H "X-User-ID: <id-da-sua-conta>" \
   -d '{"descricao":"Salário","valor":3500.00,"tipo":1}'
 ```
 

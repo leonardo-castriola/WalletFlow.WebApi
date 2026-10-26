@@ -4,11 +4,11 @@
     "Projects": [
       {
         "Path": "WalletFlow/WalletFlow.csproj",
-        "Action": "Start"
+        "Action": "StartWithoutDebugging"
       },
       {
         "Path": "WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj",
-        "Action": "Start"
+        "Action": "StartWithoutDebugging"
       }
     ]
   }

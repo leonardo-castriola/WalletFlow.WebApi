@@ -1,12 +1,17 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
 using WalletFlow.Blazor.DTOs;
 using WalletFlow.Blazor.Enums;
 
 namespace WalletFlow.Blazor.Services;
 
-public sealed class TransacaoApiClient(HttpClient httpClient, IConfiguration configuration)
+public sealed class TransacaoApiClient(
+    HttpClient httpClient,
+    IConfiguration configuration,
+    AuthenticationStateProvider authenticationStateProvider)
 {
     private readonly TimeZoneInfo _timeZone = TimeZoneInfo.FindSystemTimeZoneById(
         configuration["Filters:TimeZoneId"] ?? "America/Sao_Paulo");
@@ -35,8 +40,9 @@ public sealed class TransacaoApiClient(HttpClient httpClient, IConfiguration con
             ? "api/Transacao/filtro"
             : "api/Transacao";
 
-        using var response = await httpClient.GetAsync(
-            $"{caminho}?{string.Join('&', parametros)}", cancellationToken);
+        using var request = await CreateAuthenticatedRequestAsync(
+            HttpMethod.Get, $"{caminho}?{string.Join('&', parametros)}", cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<ResultadoPaginadoDto<TransacaoRespostaDto>>(
@@ -48,8 +54,9 @@ public sealed class TransacaoApiClient(HttpClient httpClient, IConfiguration con
         TransacaoCriacaoDto transacao,
         CancellationToken cancellationToken = default)
     {
-        using var response = await httpClient.PostAsJsonAsync(
-            "api/Transacao", transacao, cancellationToken);
+        using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Post, "api/Transacao", cancellationToken);
+        request.Content = JsonContent.Create(transacao);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<TransacaoRespostaDto>(
@@ -59,7 +66,8 @@ public sealed class TransacaoApiClient(HttpClient httpClient, IConfiguration con
 
     public async Task<decimal> ObterSaldoAsync(CancellationToken cancellationToken = default)
     {
-        using var response = await httpClient.GetAsync("api/Transacao/saldo", cancellationToken);
+        using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Get, "api/Transacao/saldo", cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
 
         var resultado = await response.Content.ReadFromJsonAsync<SaldoRespostaDto>(
@@ -77,6 +85,21 @@ public sealed class TransacaoApiClient(HttpClient httpClient, IConfiguration con
         new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(
             data.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Unspecified), timeZone), TimeSpan.Zero)
         .ToString("O", CultureInfo.InvariantCulture);
+
+    private async Task<HttpRequestMessage> CreateAuthenticatedRequestAsync(
+        HttpMethod method,
+        string uri,
+        CancellationToken cancellationToken)
+    {
+        var authenticationState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authenticationState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new UnauthorizedAccessException("É necessário entrar para acessar suas transações.");
+
+        var request = new HttpRequestMessage(method, uri);
+        request.Headers.Add("X-User-ID", userId);
+        return request;
+    }
 
     private static async Task GarantirSucessoAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {

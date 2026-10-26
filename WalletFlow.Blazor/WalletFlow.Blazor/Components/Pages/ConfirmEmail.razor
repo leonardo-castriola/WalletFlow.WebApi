@@ -1,0 +1,57 @@
+@page "/confirmar-email"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@using System.Text
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using WalletFlow.WebApi.Entities
+@inject UserManager<WalletUser> UserManager
+
+<PageTitle>Confirmar e-mail | WalletFlow</PageTitle>
+
+<section class="identity-page">
+    <div class="identity-card" role="status">
+        <a class="identity-brand" href="/">WalletFlow</a>
+        <p class="eyebrow">CONFIRMAÇÃO DE CONTA</p>
+        <h1>@(_confirmed ? "E-mail confirmado" : "Não foi possível confirmar")</h1>
+        <p class="identity-intro">@_message</p>
+        @if (_confirmed)
+        {
+            <a class="identity-submit identity-submit-link" href="/">Ir para entrar</a>
+        }
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "userId")]
+    private string? UserId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "token")]
+    private string? Token { get; set; }
+
+    private bool _confirmed;
+    private string _message = "Verificando o link de confirmação…";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(UserId) || string.IsNullOrWhiteSpace(Token))
+                throw new FormatException();
+
+            var user = await UserManager.FindByIdAsync(Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(UserId)));
+            if (user is null)
+                throw new FormatException();
+
+            var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Token));
+            var result = await UserManager.ConfirmEmailAsync(user, decodedToken);
+            _confirmed = result.Succeeded;
+            _message = result.Succeeded
+                ? "Sua conta está pronta. Entre para acessar sua carteira."
+                : "O link é inválido ou expirou. Solicite um novo link de cadastro.";
+        }
+        catch (FormatException)
+        {
+            _message = "O link é inválido ou expirou. Solicite um novo link de cadastro.";
+        }
+    }
+}

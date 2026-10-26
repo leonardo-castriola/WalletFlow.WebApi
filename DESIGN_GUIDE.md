@@ -11,7 +11,8 @@ Uma interface financeira clara, confiável e discreta. O azul comunica seguranç
 - Documento HTML e ordem das folhas de estilo: `WalletFlow.Blazor/WalletFlow.Blazor/Components/App.razor`.
 - Layout e navegação: `Components/Layout/MainLayout.razor` e `MainLayout.razor.css`; `NavMenu.razor` e `NavMenu.razor.css`.
 - Páginas: `Components/Pages/Home.razor`, `Dashboard.razor`, `Transacoes.razor` e `NovaTransacao.razor`; os estilos particulares ficam nos arquivos correspondentes `.razor.css`.
-- Login: `Components/Pages/Login.razor` (`/login`) e `Login.razor.css`, com cartão central, campos validados, foco visível e layout responsivo.
+- Login: `Components/Pages/Login.razor` (`/`) e `Login.razor.css`, com cartão central, campos validados, foco visível e layout responsivo.
+- Cadastro e recuperação Identity: `Register.razor`, `ConfirmEmail.razor`, `ForgotPassword.razor`, `ResetPassword.razor` e `Logout.razor`; cada página tem CSS isolado.
 - O projeto não usa uma pasta `Shared`; os componentes reutilizáveis ficam em `Components/Layout`.
 
 ## Paleta
@@ -77,7 +78,9 @@ Baseie os intervalos em múltiplos de `4px` (`0.25rem`).
 - Tabelas preservam rolagem horizontal em dispositivos estreitos.
 - Estados de foco devem ser visíveis por teclado; respeite `prefers-reduced-motion`.
 - Use mensagens de estado, erro e vazio com texto e semântica acessíveis.
-- A tela de login usa os mesmos tokens e tons de ação do produto; os destinos `/esqueci-a-senha` e `/criar-conta` são pontos de integração para páginas futuras.
+- Na tela de login, o controle de senha ocupa a largura do campo de e-mail; o botão de visualização fica posicionado dentro do input, com espaço interno reservado para não cobrir o texto.
+- A tela de login, cadastro e recuperação usam os destinos `/`, `/criar-conta`, `/esqueci-a-senha` e `/redefinir-senha`; mantenha o mesmo cartão, hierarquia tipográfica e estados de foco entre esses fluxos.
+- Em CSS isolado, use um elemento HTML do componente como âncora de `::deep` para estilizar elementos renderizados por componentes como `EditForm` e `InputText`.
 
 ## Biblioteca de componentes
 

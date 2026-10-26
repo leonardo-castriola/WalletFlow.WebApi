@@ -1,0 +1,26 @@
+.identity-page { align-items: center; display: flex; justify-content: center; margin: -1rem -1rem 0; min-height: calc(100vh - 7.5rem); padding: 1.5rem; }
+.identity-card { background: #fff; border: 1px solid var(--wf-line); border-radius: var(--wf-radius-lg); box-shadow: var(--wf-shadow-card); max-width: 480px; padding: clamp(1.5rem, 4vw, 2.5rem); width: 100%; }
+.identity-brand { color: var(--wf-ink); display: inline-block; font-size: 1.1rem; font-weight: 750; margin-bottom: 1.7rem; text-decoration: none; }
+.identity-card h1 { font-size: 1.8rem; margin: 0 0 .4rem; }
+.identity-intro { color: var(--wf-muted); font-size: .92rem; margin-bottom: 1.4rem; }
+.identity-form { display: grid; gap: 1rem; }
+.identity-field { display: grid; gap: .4rem; }
+.identity-field label { color: #344054; font-size: .86rem; font-weight: 650; }
+.identity-field small { color: var(--wf-muted); font-size: .76rem; }
+.identity-form ::deep .identity-input { border: 1px solid #d0d5dd; border-radius: .65rem; font: inherit; min-height: 2.9rem; outline: none; padding: .65rem .8rem; width: 100%; }
+.identity-form ::deep .identity-input:focus { border-color: #84adf5; box-shadow: var(--wf-focus); }
+.identity-password-wrap { position: relative; }
+.identity-password-wrap ::deep .identity-input { padding-right: 3rem; }
+.identity-password-toggle { align-items: center; background: transparent; border: 0; border-radius: .4rem; color: #667085; cursor: pointer; display: inline-flex; height: 2.2rem; justify-content: center; padding: .35rem; position: absolute; right: .45rem; top: 50%; transform: translateY(-50%); width: 2.2rem; }
+.identity-password-toggle:hover { background: #f2f4f7; color: #344054; }
+.identity-password-toggle:focus-visible { outline: 3px solid rgb(37 99 235 / 35%); outline-offset: 1px; }
+.identity-password-toggle svg { height: 1.2rem; width: 1.2rem; }
+.identity-form ::deep .validation-message { color: var(--wf-danger); font-size: .8rem; }
+.identity-submit { background: var(--wf-primary); border: 0; border-radius: .65rem; color: white; font-weight: 700; min-height: 3rem; }
+.identity-submit:hover { background: var(--wf-primary-hover); }
+.identity-notice, .identity-error { border-radius: .65rem; font-size: .85rem; margin: 1rem 0; padding: .75rem .9rem; }
+.identity-notice { background: var(--wf-success-soft); color: var(--wf-success); }
+.identity-error { background: #fff5f4; border: 1px solid #fecdca; color: var(--wf-danger); }
+.identity-error ul { margin: 0; padding-left: 1.1rem; }
+.identity-footer { border-top: 1px solid #f0f2f5; font-size: .86rem; margin: 1.25rem 0 0; padding-top: 1rem; text-align: center; }
+@media (max-width: 520px) { .identity-page { margin: -.5rem -.75rem 0; padding: 1rem; } .identity-card { padding: 1.4rem 1.2rem; } }

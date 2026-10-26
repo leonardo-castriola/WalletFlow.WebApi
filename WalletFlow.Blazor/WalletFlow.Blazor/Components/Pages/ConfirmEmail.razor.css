@@ -1,0 +1,8 @@
+.identity-page { align-items: center; display: flex; justify-content: center; margin: -1rem -1rem 0; min-height: calc(100vh - 7.5rem); padding: 1.5rem; }
+.identity-card { background: #fff; border: 1px solid var(--wf-line); border-radius: var(--wf-radius-lg); box-shadow: var(--wf-shadow-card); max-width: 480px; padding: clamp(1.5rem, 4vw, 2.5rem); width: 100%; }
+.identity-brand { color: var(--wf-ink); display: inline-block; font-size: 1.1rem; font-weight: 750; margin-bottom: 1.7rem; text-decoration: none; }
+.identity-card h1 { font-size: 1.8rem; margin: 0 0 .4rem; }
+.identity-intro { color: var(--wf-muted); font-size: .92rem; margin-bottom: 1.4rem; }
+.identity-submit-link { align-items: center; background: var(--wf-primary); border-radius: .65rem; color: white; display: flex; font-weight: 700; justify-content: center; min-height: 3rem; text-decoration: none; width: 100%; }
+.identity-submit-link:hover { background: var(--wf-primary-hover); color: white; }
+@media (max-width: 520px) { .identity-page { margin: -.5rem -.75rem 0; padding: 1rem; } .identity-card { padding: 1.4rem 1.2rem; } }

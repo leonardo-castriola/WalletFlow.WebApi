@@ -17,18 +17,20 @@ public sealed class FinanceiroTests
     {
         await using var database = await TestDatabase.CriarAsync();
         var service = new FinanceiroService(database.Context);
-        Assert.Equal(0m, await service.CalcularSaldoConsolidadoAsync());
+        Assert.Equal(0m, await service.CalcularSaldoConsolidadoAsync("user-1"));
     }
 
     [Fact]
     public async Task SaldoPodeFicarNegativoQuandoDespesasSuperamReceitas()
     {
         await using var database = await TestDatabase.CriarAsync();
-        database.Context.Transacoes.AddRange(
-            new Transacao { Descricao = "Receita", Valor = 100m, Tipo = TipoTransacao.Receita },
-            new Transacao { Descricao = "Despesa", Valor = 150m, Tipo = TipoTransacao.Despesa });
+        database.Context.Users.Add(new WalletFlow.WebApi.Entities.WalletUser { Id = "user-1", UserName = "user-1" });
         await database.Context.SaveChangesAsync();
-        Assert.Equal(-50m, await new FinanceiroService(database.Context).CalcularSaldoConsolidadoAsync());
+        database.Context.Transacoes.AddRange(
+            new Transacao { UserId = "user-1", Descricao = "Receita", Valor = 100m, Tipo = TipoTransacao.Receita },
+            new Transacao { UserId = "user-1", Descricao = "Despesa", Valor = 150m, Tipo = TipoTransacao.Despesa });
+        await database.Context.SaveChangesAsync();
+        Assert.Equal(-50m, await new FinanceiroService(database.Context).CalcularSaldoConsolidadoAsync("user-1"));
     }
 
     [Theory]

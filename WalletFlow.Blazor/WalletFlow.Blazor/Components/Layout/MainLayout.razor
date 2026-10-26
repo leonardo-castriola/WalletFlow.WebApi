@@ -1,14 +1,22 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+    <AuthorizeView>
+        <Authorized>
+            <div class="sidebar">
+                <NavMenu />
+            </div>
+        </Authorized>
+    </AuthorizeView>
 
     <main class="main-column">
-        <div class="top-row">
-            <span class="topbar-title">WalletFlow <span aria-hidden="true">/</span> Receitas e despesas</span>
-        </div>
+        <AuthorizeView>
+            <Authorized>
+                <div class="top-row">
+                    <span class="topbar-title">WalletFlow <span aria-hidden="true">/</span> Receitas e despesas</span>
+                </div>
+            </Authorized>
+        </AuthorizeView>
 
         <article class="content">
             @Body

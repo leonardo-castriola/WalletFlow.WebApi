@@ -8,6 +8,7 @@ using WalletFlow.WebApi.Entities;
 using WalletFlow.WebApi.Enums;
 using WalletFlow.WebApi.Middleware;
 using Xunit;
+using System.Security.Claims;
 
 namespace WalletFlow.Tests;
 
@@ -22,14 +23,24 @@ public sealed class ApiBehaviorTests
         await using var context = new WalletDbContext(options);
         await context.Database.EnsureCreatedAsync();
         var data = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+        context.Users.Add(new WalletUser { Id = "user-1", UserName = "user-1" });
+        await context.SaveChangesAsync();
         context.Transacoes.AddRange(
-            new Transacao { Descricao = "Receita 1", Valor = 10, Tipo = TipoTransacao.Receita, DataCadastro = data },
-            new Transacao { Descricao = "Despesa", Valor = 2, Tipo = TipoTransacao.Despesa, DataCadastro = data.AddDays(1) },
-            new Transacao { Descricao = "Receita 2", Valor = 20, Tipo = TipoTransacao.Receita, DataCadastro = data.AddDays(2) },
-            new Transacao { Descricao = "Receita fora do período", Valor = 30, Tipo = TipoTransacao.Receita, DataCadastro = data.AddDays(5) });
+            new Transacao { UserId = "user-1", Descricao = "Receita 1", Valor = 10, Tipo = TipoTransacao.Receita, DataCadastro = data },
+            new Transacao { UserId = "user-1", Descricao = "Despesa", Valor = 2, Tipo = TipoTransacao.Despesa, DataCadastro = data.AddDays(1) },
+            new Transacao { UserId = "user-1", Descricao = "Receita 2", Valor = 20, Tipo = TipoTransacao.Receita, DataCadastro = data.AddDays(2) },
+            new Transacao { UserId = "user-1", Descricao = "Receita fora do período", Valor = 30, Tipo = TipoTransacao.Receita, DataCadastro = data.AddDays(5) });
         await context.SaveChangesAsync();
 
         var controller = new TransacaoController(context, new WalletFlow.WebApi.Services.FinanceiroService(context));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"))
+            }
+        };
         var action = await controller.ObterFiltrado(TipoTransacao.Receita, data, data.AddDays(3), page: 2, pageSize: 1);
         var result = Assert.IsType<OkObjectResult>(action.Result);
         var page = Assert.IsType<WalletFlow.WebApi.DTOs.ResultadoPaginadoDto<WalletFlow.WebApi.DTOs.TransacaoRespostaDto>>(result.Value);

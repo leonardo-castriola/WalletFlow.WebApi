@@ -1,9 +1,13 @@
 @page "/painel"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @rendermode InteractiveServer
 @using WalletFlow.Blazor.DTOs
 @using WalletFlow.Blazor.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject TransacaoApiClient Api
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Painel financeiro | WalletFlow</PageTitle>
 
@@ -91,8 +95,23 @@
     private IReadOnlyList<TransacaoRespostaDto> _transacoesRecentes = [];
     private bool _carregando = true;
     private string? _erro;
+    private string? _usuarioId;
 
-    protected override Task OnInitializedAsync() => CarregarAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _usuarioId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(_usuarioId))
+        {
+            _erro = "Não foi possível identificar a sessão autenticada.";
+            _carregando = false;
+            return;
+        }
+
+        // O cliente de API envia este NameIdentifier pelo canal servidor-a-servidor;
+        // a API valida a conta e usa o claim para filtrar todas as consultas.
+        await CarregarAsync();
+    }
 
     private async Task CarregarAsync()
     {

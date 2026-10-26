@@ -1,0 +1,32 @@
+@page "/sair"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.Identity
+@using WalletFlow.WebApi.Entities
+@inject SignInManager<WalletUser> SignInManager
+@inject NavigationManager Navigation
+
+<PageTitle>Sair | WalletFlow</PageTitle>
+
+<section class="logout-page">
+    <div class="logout-card">
+        <p class="eyebrow">SESSÃO WALLETFlow</p>
+        <h1>Deseja sair?</h1>
+        <p>Sua sessão será encerrada neste dispositivo.</p>
+        <EditForm Model="_form" FormName="logout" OnValidSubmit="LogoutAsync" Enhance>
+            <button class="btn btn-primary" type="submit">Encerrar sessão</button>
+            <a class="btn btn-outline-secondary" href="/painel">Continuar conectado</a>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private readonly LogoutForm _form = new();
+
+    private async Task LogoutAsync()
+    {
+        await SignInManager.SignOutAsync();
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+
+    private sealed class LogoutForm { }
+}
