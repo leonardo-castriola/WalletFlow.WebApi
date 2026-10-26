@@ -1,0 +1,86 @@
+@page "/login"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Entrar | WalletFlow</PageTitle>
+
+<section class="login-page" aria-labelledby="login-title">
+    <div class="login-card">
+        <a class="login-brand" href="/" aria-label="WalletFlow — página inicial">
+            <span class="login-brand-mark" aria-hidden="true">W</span>
+            <span>WalletFlow</span>
+        </a>
+
+        <header class="login-heading">
+            <p class="login-eyebrow">BEM-VINDO DE VOLTA</p>
+            <h1 id="login-title">Acesse sua conta</h1>
+            <p>Entre para acompanhar suas finanças com tranquilidade.</p>
+        </header>
+
+        <EditForm Model="_model" OnValidSubmit="HandleLogin" class="login-form">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="login-validation-summary" />
+
+            <div class="login-field">
+                <label for="login-email">E-mail</label>
+                <InputText id="login-email"
+                           class="login-input"
+                           type="email"
+                           autocomplete="email"
+                           placeholder="voce@exemplo.com"
+                           @bind-Value="_model.Email" />
+                <ValidationMessage For="@(() => _model.Email)" class="login-field-error" />
+            </div>
+
+            <div class="login-field">
+                <div class="login-label-row">
+                    <label for="login-password">Senha</label>
+                    <a class="login-forgot-link" href="/esqueci-a-senha">Esqueceu a senha?</a>
+                </div>
+                <InputText id="login-password"
+                           class="login-input"
+                           type="password"
+                           autocomplete="current-password"
+                           placeholder="Digite sua senha"
+                           @bind-Value="_model.Password" />
+                <ValidationMessage For="@(() => _model.Password)" class="login-field-error" />
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <p class="login-placeholder-message" role="status">@_message</p>
+            }
+
+            <button class="login-submit" type="submit">Entrar</button>
+        </EditForm>
+
+        <p class="login-signup">
+            Ainda não tem uma conta? <a href="/criar-conta">Criar uma conta</a>
+        </p>
+
+        <p class="login-security-note"><span aria-hidden="true">●</span> Seus dados são tratados com segurança.</p>
+    </div>
+</section>
+
+@code {
+    private readonly LoginModel _model = new();
+    private string? _message;
+
+    private Task HandleLogin()
+    {
+        // Placeholder: nunca registre senha ou outros dados de autenticação em logs.
+        Console.WriteLine("Formulário de login validado; serviço de autenticação ainda não configurado.");
+        _message = "Formulário validado. A autenticação será conectada em breve.";
+        return Task.CompletedTask;
+    }
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Informe seu e-mail.")]
+        [EmailAddress(ErrorMessage = "Informe um endereço de e-mail válido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe sua senha.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}
