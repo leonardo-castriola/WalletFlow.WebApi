@@ -15,12 +15,18 @@
 
 <PageTitle>Criar conta | WalletFlow</PageTitle>
 
-<section class="identity-page">
+<section class="identity-page" aria-labelledby="register-title">
     <div class="identity-card">
-        <a class="identity-brand" href="/">WalletFlow</a>
-        <p class="eyebrow">COMECE A ORGANIZAR</p>
-        <h1>Criar sua conta</h1>
-        <p class="identity-intro">Use seu e-mail para criar um espaço financeiro privado.</p>
+        <a class="identity-brand" href="/" aria-label="WalletFlow — página inicial">
+            <span class="identity-brand-mark" aria-hidden="true">W</span>
+            <span>WalletFlow</span>
+        </a>
+
+        <header class="identity-heading">
+            <p class="eyebrow">COMECE A ORGANIZAR</p>
+            <h1 id="register-title">Criar sua conta</h1>
+            <p class="identity-intro">Use seu e-mail para criar um espaço financeiro privado.</p>
+        </header>
 
         @if (!string.IsNullOrWhiteSpace(_message))
         {
@@ -33,57 +39,60 @@
 
         @if (!_completed)
         {
-            <EditForm Model="_model" FormName="register" OnValidSubmit="RegisterAsync" Enhance class="identity-form">
+            <EditForm Model="_model!" FormName="register" OnValidSubmit="RegisterAsync" Enhance class="identity-form">
                 <DataAnnotationsValidator />
                 <div class="identity-field">
                     <label for="register-email">E-mail</label>
-                    <InputText id="register-email" class="identity-input" type="email" autocomplete="email" @bind-Value="_model.Email" />
-                    <ValidationMessage For="@(() => _model.Email)" />
+                    <InputText id="register-email" class="identity-input" type="email" autocomplete="email" @bind-Value="_model!.Email" />
+                    <ValidationMessage For="@(() => _model!.Email)" />
                 </div>
                 <div class="identity-field">
                     <label for="register-password">Senha</label>
                     <div class="identity-password-wrap">
-                        <InputText id="register-password" class="identity-input" type="password" autocomplete="new-password" @bind-Value="_model.Password" />
+                        <InputText id="register-password" class="identity-input" type="password" autocomplete="new-password" @bind-Value="_model!.Password" />
                         <button class="identity-password-toggle" type="button" data-password-toggle aria-controls="register-password" aria-label="Mostrar senha" aria-pressed="false">
                             <svg class="password-eye" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.45-6 9.5-6 9.5 6 9.5 6-3.45 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg>
                             <svg class="password-eye-off" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.05 0 9.5 7 9.5 7a15 15 0 0 1-3.1 3.9M6.2 6.2C3.8 7.8 2.5 12 2.5 12s3.45 7 9.5 7c1 0 2-.2 2.8-.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </button>
                     </div>
-                    <ValidationMessage For="@(() => _model.Password)" />
+                    <ValidationMessage For="@(() => _model!.Password)" />
                     <small>Use 12 ou mais caracteres, com maiúscula, minúscula, número e símbolo.</small>
                 </div>
                 <div class="identity-field">
                     <label for="register-confirm-password">Confirmar senha</label>
                     <div class="identity-password-wrap">
-                        <InputText id="register-confirm-password" class="identity-input" type="password" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
+                        <InputText id="register-confirm-password" class="identity-input" type="password" autocomplete="new-password" @bind-Value="_model!.ConfirmPassword" />
                         <button class="identity-password-toggle" type="button" data-password-toggle aria-controls="register-confirm-password" aria-label="Mostrar senha" aria-pressed="false">
                             <svg class="password-eye" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.45-6 9.5-6 9.5 6 9.5 6-3.45 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg>
                             <svg class="password-eye-off" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.05 0 9.5 7 9.5 7a15 15 0 0 1-3.1 3.9M6.2 6.2C3.8 7.8 2.5 12 2.5 12s3.45 7 9.5 7c1 0 2-.2 2.8-.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </button>
                     </div>
-                    <ValidationMessage For="@(() => _model.ConfirmPassword)" />
+                    <ValidationMessage For="@(() => _model!.ConfirmPassword)" />
                 </div>
                 <button class="identity-submit" type="submit">Cadastrar novo usuário</button>
             </EditForm>
         }
 
-        <p class="identity-footer"><a href="/">Voltar para entrar</a></p>
+        <p class="identity-footer">Já tem uma conta? <a href="/">Voltar para entrar</a></p>
+        <p class="identity-security-note"><span aria-hidden="true">●</span> Seus dados são tratados com segurança.</p>
     </div>
 </section>
 
 @code {
     [SupplyParameterFromForm(FormName = "register")]
-    private RegisterModel? _postedModel { get; set; }
-    private RegisterModel _model => _postedModel ??= new();
+    private RegisterModel? _model { get; set; }
     private readonly List<string> _errors = [];
     private string? _message;
     private bool _completed;
 
+    protected override void OnInitialized() => _model ??= new();
+
     private async Task RegisterAsync()
     {
         _errors.Clear();
-        var user = new WalletUser { UserName = _model.Email.Trim(), Email = _model.Email.Trim() };
-        var result = await UserManager.CreateAsync(user, _model.Password);
+        var model = _model!;
+        var user = new WalletUser { UserName = model.Email.Trim(), Email = model.Email.Trim() };
+        var result = await UserManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
         {
             _errors.AddRange(result.Errors.Select(error => error.Description));

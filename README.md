@@ -40,7 +40,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 
 ## Pré-requisitos
 
-- .NET 10 SDK
+- .NET SDK 10.0.400 (a versão está fixada em `global.json`)
 - Visual Studio com suporte ao .NET 10 (opcional)
 - Git
 
@@ -91,6 +91,13 @@ Também é possível aplicar as migrações pela Package Manager Console do Visu
 Update-Database -Project WalletFlow -StartupProject WalletFlow
 ```
 
+No terminal, restaure a ferramenta local do Entity Framework e aplique as migrações:
+
+```bash
+dotnet tool restore
+dotnet ef database update --project WalletFlow/WalletFlow.csproj --startup-project WalletFlow/WalletFlow.csproj
+```
+
 ### Terminal
 
 ```bash
@@ -98,6 +105,8 @@ dotnet build WalletFlow.WebApi.slnx
 dotnet test WalletFlow.WebApi.slnx
 dotnet run --project WalletFlow/WalletFlow.csproj
 ```
+
+Os testes de navegador usam o Google Chrome instalado e iniciam a aplicação Blazor com um banco SQLite temporário. O Google Chrome precisa estar instalado na máquina; os envios de e-mail não são realizados pelos testes.
 
 Com o perfil local, abra [http://localhost:5250/swagger](http://localhost:5250/swagger). O banco `Wallet.db` é criado no diretório de conteúdo da aplicação. O arquivo é local e ignorado pelo Git.
 
