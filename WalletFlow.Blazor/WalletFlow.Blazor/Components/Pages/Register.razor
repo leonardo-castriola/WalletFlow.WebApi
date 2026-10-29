@@ -1,17 +1,9 @@
 @page "/criar-conta"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @using System.ComponentModel.DataAnnotations
-@using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
-@using WalletFlow.Blazor.Services
 @using WalletFlow.WebApi.Entities
-@using WalletFlow.WebApi.Services
 @inject UserManager<WalletUser> UserManager
-@inject IEmailSender EmailSender
-@inject IConfiguration Configuration
-@inject IHostEnvironment HostEnvironment
-@inject NavigationManager Navigation
-@inject ILogger<Register> Logger
 
 <PageTitle>Criar conta | WalletFlow</PageTitle>
 
@@ -91,7 +83,12 @@
     {
         _errors.Clear();
         var model = _model!;
-        var user = new WalletUser { UserName = model.Email.Trim(), Email = model.Email.Trim() };
+        var user = new WalletUser
+        {
+            UserName = model.Email.Trim(),
+            Email = model.Email.Trim(),
+            EmailConfirmed = true
+        };
         var result = await UserManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
         {
@@ -99,22 +96,8 @@
             return;
         }
 
-        try
-        {
-            var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-            var link = IdentityLinkBuilder.Build("confirmar-email", user.Id, token, Configuration, HostEnvironment, Navigation);
-            var safeLink = HtmlEncoder.Default.Encode(link);
-            await EmailSender.SendAsync(user.Email!, "Confirme sua conta WalletFlow",
-                $"<p>Para confirmar seu endereço de e-mail, <a href=\"{safeLink}\">acesse este link</a>.</p>");
-            _completed = true;
-            _message = "Enviamos um link de confirmação para seu e-mail. Confirme o endereço para entrar.";
-        }
-        catch (Exception exception)
-        {
-            await UserManager.DeleteAsync(user);
-            Logger.LogError(exception, "Falha ao enviar a confirmação de cadastro.");
-            _errors.Add("Não foi possível enviar o e-mail de confirmação. Tente novamente mais tarde.");
-        }
+        _completed = true;
+        _message = "Usuário cadastrado com sucesso.";
     }
 
     private sealed class RegisterModel

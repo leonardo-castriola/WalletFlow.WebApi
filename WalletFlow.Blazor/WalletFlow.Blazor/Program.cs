@@ -27,7 +27,7 @@ builder.Services.AddDbContext<WalletDbContext>(options => options.UseSqlite(sqli
 builder.Services.AddIdentityCore<WalletUser>(options =>
 {
     options.User.RequireUniqueEmail = true;
-    options.SignIn.RequireConfirmedEmail = true;
+    options.SignIn.RequireConfirmedEmail = false;
     options.Password.RequiredLength = 12;
     options.Password.RequiredUniqueChars = 4;
     options.Password.RequireDigit = true;

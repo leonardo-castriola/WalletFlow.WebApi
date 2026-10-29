@@ -24,7 +24,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Documentação interativa pelo Swagger em desenvolvimento.
 - Interface web Blazor com página inicial, painel de saldo, extrato e cadastro de transações integrado à API.
 - Tela de login responsiva na rota `/`, com validação, alternância de visibilidade da senha e atalhos para cadastro e recuperação.
-- Cadastro com confirmação de e-mail, recuperação de senha e proteção das rotas financeiras pelo ASP.NET Core Identity.
+- Cadastro sem confirmação por e-mail, recuperação de senha por link enviado ao e-mail e proteção das rotas financeiras pelo ASP.NET Core Identity.
 - Filtros de tipo e período no extrato, preservando paginação e ordenação das movimentações mais recentes.
 - Validação do formulário, confirmação após o cadastro e opção de cancelar sem persistir os dados.
 
@@ -112,13 +112,13 @@ Com o perfil local, abra [http://localhost:5250/swagger](http://localhost:5250/s
 
 ## Autenticação
 
-O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro exige confirmação do e-mail; as senhas seguem a política do Identity (mínimo de 12 caracteres, letras maiúsculas e minúsculas, número e símbolo), com bloqueio temporário após cinco tentativas inválidas. A sessão é HttpOnly, SameSite=Lax, dura oito horas e é revalidada no circuito Blazor.
+O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro confirma a conta na própria criação e exibe uma mensagem de sucesso, sem enviar e-mail; o SMTP é usado para recuperação de senha. As senhas seguem a política do Identity (mínimo de 12 caracteres, letras maiúsculas e minúsculas, número e símbolo), com bloqueio temporário após cinco tentativas inválidas. A sessão é HttpOnly, SameSite=Lax, dura oito horas e é revalidada no circuito Blazor.
 
 As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimento, o host Blazor e a API já apontam para `WalletFlow/Wallet.db`. Em produção, configure o mesmo caminho absoluto em `ConnectionStrings__DefaultConnection` para os dois processos. As migrações são aplicadas na inicialização. Transações preexistentes ficam sem proprietário e não aparecem para nenhuma conta até serem associadas por um processo administrativo.
 
 O host Blazor deriva o ID do usuário da sessão autenticada e envia esse ID à API em uma chamada servidor-a-servidor. A API valida a conta e filtra listagem, busca por ID e saldo pelo proprietário. Em produção, mantenha a chave de serviço em `Authentication__ApiKey` nos dois processos; ela nunca é enviada pelo navegador. O Blazor e a API devem usar HTTPS.
 
-Para confirmação e recuperação de senha, configure SMTP no host Blazor. Tokens de confirmação e redefinição expiram após uma hora. Configure estes valores por variáveis de ambiente ou por um gerenciador de segredos; não grave credenciais no repositório:
+Para recuperação de senha, configure SMTP no host Blazor. Tokens de redefinição expiram após uma hora. Configure estes valores por variáveis de ambiente ou por um gerenciador de segredos; não grave credenciais no repositório:
 
 ```text
 Identity__PublicBaseUrl=https://wallet.exemplo.com
@@ -132,7 +132,7 @@ ConnectionStrings__DefaultConnection=Data Source=/caminho/compartilhado/Wallet.d
 Authentication__ApiKey=<mesma chave forte no host Blazor e na API>
 ```
 
-Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. Configure SMTP local para concluir cadastro e recuperação. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
+Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. Configure SMTP local para testar a recuperação de senha. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
 
 Exemplo no PowerShell:
 
@@ -161,7 +161,7 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | Página | Rota | O que permite fazer |
 | --- | --- | --- |
 | Entrar | `/` | Entrar com e-mail e senha |
-| Criar conta | `/criar-conta` | Cadastrar e confirmar o endereço de e-mail |
+| Criar conta | `/criar-conta` | Cadastrar conta e exibir confirmação de sucesso |
 | Recuperar senha | `/esqueci-a-senha` | Solicitar link de redefinição por e-mail |
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
