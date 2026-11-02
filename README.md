@@ -112,7 +112,7 @@ Com o perfil local, abra [http://localhost:5250/swagger](http://localhost:5250/s
 
 ## Autenticação
 
-O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro confirma a conta na própria criação e exibe uma mensagem de sucesso, sem enviar e-mail; o SMTP é usado para recuperação de senha. As senhas seguem a política do Identity (mínimo de 12 caracteres, letras maiúsculas e minúsculas, número e símbolo), com bloqueio temporário após cinco tentativas inválidas. A sessão é HttpOnly, SameSite=Lax, dura oito horas e é revalidada no circuito Blazor.
+O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro confirma a conta na própria criação e exibe uma mensagem de sucesso, sem enviar e-mail; o SMTP é usado para recuperação de senha. O formulário de redefinição valida os dados recebidos, salva a nova senha pelo ASP.NET Core Identity e exibe a confirmação somente após a gravação. Se os campos não forem enviados ou o token for inválido, a página informa o problema e mantém a senha anterior. As senhas seguem a política do Identity (mínimo de 12 caracteres, letras maiúsculas e minúsculas, número e símbolo), com bloqueio temporário após cinco tentativas inválidas. A sessão é HttpOnly, SameSite=Lax, dura oito horas e é revalidada no circuito Blazor.
 
 As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimento, o host Blazor e a API já apontam para `WalletFlow/Wallet.db`. Em produção, configure o mesmo caminho absoluto em `ConnectionStrings__DefaultConnection` para os dois processos. As migrações são aplicadas na inicialização. Transações preexistentes ficam sem proprietário e não aparecem para nenhuma conta até serem associadas por um processo administrativo.
 
@@ -132,7 +132,7 @@ ConnectionStrings__DefaultConnection=Data Source=/caminho/compartilhado/Wallet.d
 Authentication__ApiKey=<mesma chave forte no host Blazor e na API>
 ```
 
-Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. Configure SMTP local para testar a recuperação de senha. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
+Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. Configure host, porta, remetente, usuário e senha SMTP nos User Secrets do projeto `WalletFlow.Blazor` para testar a recuperação de senha. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
 
 Exemplo no PowerShell:
 
