@@ -1,0 +1,34 @@
+.edit-transaction-panel {
+    margin: 0 auto;
+    max-width: 720px;
+    width: 100%;
+}
+
+.edit-transaction-panel > form {
+    margin: 0;
+    max-width: none;
+    position: static;
+    width: 100%;
+}
+
+.edit-transaction-panel .form-control,
+.edit-transaction-panel .form-select {
+    background-color: #fff;
+}
+
+.edit-transaction-panel .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .65rem;
+    margin-top: 1.4rem;
+}
+
+.edit-transaction-panel .form-actions .btn {
+    min-width: 10rem;
+}
+
+@media (max-width: 520px) {
+    .edit-transaction-panel .form-actions .btn {
+        flex: 1 1 100%;
+    }
+}

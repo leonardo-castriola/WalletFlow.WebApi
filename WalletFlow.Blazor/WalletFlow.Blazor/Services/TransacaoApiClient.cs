@@ -64,6 +64,40 @@ public sealed class TransacaoApiClient(
                ?? throw new InvalidOperationException("A API não retornou a transação criada.");
     }
 
+    public async Task<TransacaoRespostaDto> ObterTransacaoAsync(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = await CreateAuthenticatedRequestAsync(
+            HttpMethod.Get, $"api/Transacao/{id.ToString(CultureInfo.InvariantCulture)}", cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<TransacaoRespostaDto>(
+                   cancellationToken: cancellationToken)
+               ?? throw new InvalidOperationException("A API não retornou a transação solicitada.");
+    }
+
+    public async Task AtualizarTransacaoAsync(
+        int id,
+        TransacaoCriacaoDto transacao,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = await CreateAuthenticatedRequestAsync(
+            HttpMethod.Put, $"api/Transacao/{id.ToString(CultureInfo.InvariantCulture)}", cancellationToken);
+        request.Content = JsonContent.Create(transacao);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoAsync(response, cancellationToken);
+    }
+
+    public async Task ExcluirTransacaoAsync(int id, CancellationToken cancellationToken = default)
+    {
+        using var request = await CreateAuthenticatedRequestAsync(
+            HttpMethod.Delete, $"api/Transacao/{id.ToString(CultureInfo.InvariantCulture)}", cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoAsync(response, cancellationToken);
+    }
+
     public async Task<decimal> ObterSaldoAsync(CancellationToken cancellationToken = default)
     {
         using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Get, "api/Transacao/saldo", cancellationToken);
@@ -110,7 +144,7 @@ public sealed class TransacaoApiClient(
         {
             HttpStatusCode.BadRequest => "A API rejeitou os dados enviados. Confira os campos e os filtros.",
             HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => "A API não autorizou a operação. Confira a configuração de acesso no servidor.",
-            HttpStatusCode.NotFound => "A rota solicitada não foi encontrada na API.",
+            HttpStatusCode.NotFound => "A transação não foi encontrada ou não pertence à sua conta.",
             _ => "Não foi possível concluir a operação na API. Tente novamente mais tarde."
         };
 

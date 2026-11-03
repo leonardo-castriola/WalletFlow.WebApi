@@ -15,6 +15,9 @@
 .filter-actions .btn-link { align-items: center; display: inline-flex; }
 .transactions-panel .table-responsive { border-top: 1px solid #f0f2f5; }
 .transactions-panel .pagination-row { margin-top: .25rem; }
+.transaction-actions { min-width: 190px; white-space: nowrap; }
+.transaction-actions .btn { margin: .15rem; }
+.delete-confirmation { color: var(--wf-danger); display: block; font-size: .75rem; font-weight: 650; margin-bottom: .25rem; }
 @media (max-width: 850px) {
     .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .filter-actions { align-items: center; grid-column: 1 / -1; }
@@ -23,4 +26,5 @@
     .filters { grid-template-columns: 1fr; }
     .filter-actions { grid-column: auto; }
     .filters > div { min-width: 0; }
+    .transaction-actions { min-width: 170px; }
 }

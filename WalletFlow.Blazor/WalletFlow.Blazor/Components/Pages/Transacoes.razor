@@ -22,6 +22,10 @@
 {
     <div class="alert alert-danger" role="alert">@_erro</div>
 }
+@if (!string.IsNullOrWhiteSpace(_mensagem))
+{
+    <div class="alert alert-success" role="status">@_mensagem</div>
+}
 
 <section class="panel transactions-panel">
     <div class="section-heading">
@@ -56,7 +60,7 @@
     {
         <div class="table-responsive">
             <table class="table transaction-table align-middle">
-                <thead><tr><th>Descrição</th><th>Data</th><th>Tipo</th><th class="text-end">Valor</th></tr></thead>
+                <thead><tr><th>Descrição</th><th>Data</th><th>Tipo</th><th class="text-end">Valor</th><th class="text-end">Ações</th></tr></thead>
                 <tbody>
                     @foreach (var transacao in _resultado.Items)
                     {
@@ -65,6 +69,19 @@
                             <td>@transacao.DataCadastro.ToLocalTime().ToString("dd/MM/yyyy", Cultura)</td>
                             <td><span class="type-pill @(transacao.TipoFormatado == "Receita" ? "income" : "expense")">@transacao.TipoFormatado</span></td>
                             <td class="text-end transaction-value">@transacao.Valor.ToString("C", Cultura)</td>
+                            <td class="text-end transaction-actions">
+                                @if (_exclusaoPendenteId == transacao.Id)
+                                {
+                                    <span class="delete-confirmation">Excluir esta transação?</span>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => ExcluirAsync(transacao.Id)" disabled="@_excluindo">@( _excluindo ? "Excluindo..." : "Confirmar")</button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelarExclusao" disabled="@_excluindo">Cancelar</button>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" href="@($"/transacoes/editar/{transacao.Id}")" aria-label="Editar transação: @transacao.Descricao">Editar</a>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => SolicitarExclusao(transacao.Id)" aria-label="Excluir transação: @transacao.Descricao">Excluir</button>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -87,7 +104,10 @@
     private string _dataInicio = string.Empty;
     private string _dataFim = string.Empty;
     private string? _erro;
+    private string? _mensagem;
     private bool _carregando = true;
+    private bool _excluindo;
+    private int? _exclusaoPendenteId;
     private int _pagina = 1;
     private const int ItensPorPagina = 10;
 
@@ -127,6 +147,46 @@
     private async Task LimparFiltrosAsync() { _tipoFiltro = _dataInicio = _dataFim = string.Empty; _pagina = 1; await CarregarAsync(); }
     private async Task PaginaAnteriorAsync() { if (_pagina > 1) { _pagina--; await CarregarAsync(); } }
     private async Task ProximaPaginaAsync() { if (_resultado is not null && _pagina < _resultado.TotalPages) { _pagina++; await CarregarAsync(); } }
+
+    private void SolicitarExclusao(int id)
+    {
+        _exclusaoPendenteId = id;
+        _erro = null;
+        _mensagem = null;
+    }
+
+    private void CancelarExclusao() => _exclusaoPendenteId = null;
+
+    private async Task ExcluirAsync(int id)
+    {
+        if (_excluindo || _exclusaoPendenteId != id)
+            return;
+
+        _excluindo = true;
+        _erro = null;
+        _mensagem = null;
+        try
+        {
+            await Api.ExcluirTransacaoAsync(id);
+            _exclusaoPendenteId = null;
+            _mensagem = "Transação excluída com sucesso.";
+
+            if (_resultado?.Items.Count == 1 && _pagina > 1)
+                _pagina--;
+
+            await CarregarAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            _erro = ex.StatusCode is null
+                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                : ex.Message;
+        }
+        finally
+        {
+            _excluindo = false;
+        }
+    }
 
     private TipoTransacao? LerTipoFiltro()
     {

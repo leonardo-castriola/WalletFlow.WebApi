@@ -185,6 +185,42 @@ namespace WalletFlow.WebApi.Controllers
             return Ok(respostaDto);
         }
 
+        // PUT: api/transacao/{id} (Atualizar uma transação do usuário autenticado)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> AtualizarTransacao(
+            int id,
+            [FromBody] TransacaoCriacaoDto dto,
+            CancellationToken cancellationToken)
+        {
+            var transacao = await _context.Transacoes
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == CurrentUserId, cancellationToken);
+
+            if (transacao is null)
+                return NotFound($"Transação com o ID {id} não foi encontrada.");
+
+            transacao.Descricao = dto.Descricao;
+            transacao.Valor = dto.Valor;
+            transacao.Tipo = dto.Tipo!.Value;
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return NoContent();
+        }
+
+        // DELETE: api/transacao/{id} (Excluir apenas uma transação do usuário autenticado)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> ExcluirTransacao(int id, CancellationToken cancellationToken)
+        {
+            var transacao = await _context.Transacoes
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == CurrentUserId, cancellationToken);
+
+            if (transacao is null)
+                return NotFound($"Transação com o ID {id} não foi encontrada.");
+
+            _context.Transacoes.Remove(transacao);
+            await _context.SaveChangesAsync(cancellationToken);
+            return NoContent();
+        }
+
         // 4. GET: api/transacao/saldo (Calcular saldo consolidado via Service)
         [HttpGet("saldo")]
         public async Task<ActionResult<decimal>> ObterSaldoConsolidado(CancellationToken cancellationToken)

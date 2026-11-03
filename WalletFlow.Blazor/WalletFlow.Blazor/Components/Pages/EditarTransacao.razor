@@ -1,0 +1,146 @@
+@page "/transacoes/editar/{Id:int}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using WalletFlow.Blazor.DTOs
+@using WalletFlow.Blazor.Enums
+@using WalletFlow.Blazor.Services
+@inject TransacaoApiClient Api
+@inject ILogger<EditarTransacao> Logger
+
+<PageTitle>Editar transação | WalletFlow</PageTitle>
+
+<div class="dashboard-header">
+    <div>
+        <p class="eyebrow">MOVIMENTAÇÃO FINANCEIRA</p>
+        <h1>Editar transação</h1>
+        <p class="text-secondary">Atualize a descrição, o valor ou o tipo desta movimentação.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/transacoes">Voltar ao extrato</a>
+</div>
+
+<section class="panel edit-transaction-panel">
+    @if (!string.IsNullOrWhiteSpace(_erro))
+    {
+        <div class="alert alert-danger" role="alert">@_erro</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_mensagemSucesso))
+    {
+        <div class="alert alert-success" role="status">@_mensagemSucesso</div>
+        <a class="btn btn-primary" href="/transacoes">Ir para o extrato</a>
+    }
+    else if (_carregando)
+    {
+        <p class="empty-state" role="status">Carregando transação...</p>
+    }
+    else if (_modelo is not null)
+    {
+        <EditForm Model="_modelo" OnValidSubmit="SalvarAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="validation-summary" />
+            <div class="mb-3">
+                <label class="form-label" for="descricao-edicao">Descrição</label>
+                <InputText id="descricao-edicao" class="form-control" @bind-Value="_modelo.Descricao" maxlength="100" disabled="@_salvando" />
+                <ValidationMessage For="@(() => _modelo.Descricao)" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="valor-edicao">Valor</label>
+                <InputNumber id="valor-edicao" class="form-control" @bind-Value="_modelo.Valor" min="0.01" max="99999999.99" step="0.01" disabled="@_salvando" />
+                <ValidationMessage For="@(() => _modelo.Valor)" />
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="tipo-edicao">Tipo</label>
+                <InputSelect id="tipo-edicao" class="form-select" @bind-Value="_modelo.Tipo" disabled="@_salvando">
+                    <option value="">Selecione o tipo</option>
+                    <option value="0">Despesa</option>
+                    <option value="1">Receita</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => _modelo.Tipo)" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" disabled="@_salvando">@(_salvando ? "Salvando..." : "Salvar alterações")</button>
+                <a class="btn btn-outline-secondary" href="/transacoes">Cancelar</a>
+            </div>
+        </EditForm>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TransacaoCriacaoDto? _modelo;
+    private string? _erro;
+    private string? _mensagemSucesso;
+    private bool _carregando = true;
+    private bool _salvando;
+    private int? _idCarregado;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_idCarregado == Id)
+            return;
+
+        _idCarregado = Id;
+        _carregando = true;
+        _erro = null;
+        _mensagemSucesso = null;
+        try
+        {
+            var transacao = await Api.ObterTransacaoAsync(Id);
+            if (!Enum.TryParse<TipoTransacao>(transacao.TipoFormatado, out var tipo))
+                throw new InvalidOperationException("A API retornou um tipo de transação desconhecido.");
+
+            _modelo = new TransacaoCriacaoDto
+            {
+                Descricao = transacao.Descricao,
+                Valor = transacao.Valor,
+                Tipo = tipo
+            };
+        }
+        catch (HttpRequestException exception)
+        {
+            _erro = exception.StatusCode is null
+                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                : exception.Message;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Falha ao carregar a transação {TransacaoId} para edição.", Id);
+            _erro = "Não foi possível carregar esta transação.";
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando || _modelo is null)
+            return;
+
+        _salvando = true;
+        _erro = null;
+        try
+        {
+            await Api.AtualizarTransacaoAsync(Id, _modelo);
+            _mensagemSucesso = "Transação atualizada com sucesso.";
+        }
+        catch (HttpRequestException exception)
+        {
+            _erro = exception.StatusCode is null
+                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                : exception.Message;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Falha ao atualizar a transação {TransacaoId}.", Id);
+            _erro = "Não foi possível salvar as alterações. Seus dados foram mantidos para uma nova tentativa.";
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+}
