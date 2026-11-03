@@ -13,6 +13,7 @@ using System.Globalization;
 using Microsoft.Data.Sqlite;
 using WalletFlow.WebApi.Enums;
 using System.Security.Claims;
+using System.Text;
 
 namespace WalletFlow.WebApi.Controllers
 {
@@ -21,6 +22,9 @@ namespace WalletFlow.WebApi.Controllers
     [Route("api/[controller]")]
     public class TransacaoController : ControllerBase
     {
+        private const long TamanhoMaximoArquivo = 5 * 1024 * 1024;
+        private const long TamanhoMaximoRequisicao = TamanhoMaximoArquivo + 64 * 1024;
+        private const int MaximoLancamentos = 500;
         private readonly WalletDbContext _context;
         private readonly IFinanceiroService _financeiroService;
         private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -31,6 +35,76 @@ namespace WalletFlow.WebApi.Controllers
         {
             _context = context;
             _financeiroService = financeiroService;
+        }
+
+        [HttpPost("importacao/previa")]
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(TamanhoMaximoRequisicao)]
+        [RequestFormLimits(MultipartBodyLengthLimit = TamanhoMaximoRequisicao)]
+        public async Task<ActionResult<ExtratoImportacaoPreviaDto>> AnalisarExtrato(
+            IFormFile? arquivo,
+            [FromServices] IExtratoImportador importador,
+            CancellationToken cancellationToken)
+        {
+            if (arquivo is null || arquivo.Length == 0)
+                return BadRequest("Selecione um arquivo OFX ou CSV não vazio.");
+            if (arquivo.Length > TamanhoMaximoArquivo)
+                return BadRequest("O arquivo excede o limite de 5 MB.");
+            if (!new[] { ".ofx", ".csv" }.Contains(Path.GetExtension(arquivo.FileName), StringComparer.OrdinalIgnoreCase))
+                return BadRequest("Formato não suportado. Envie um arquivo .CSV ou .OFX.");
+
+            try
+            {
+                await using var stream = arquivo.OpenReadStream();
+                using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                var conteudo = await reader.ReadToEndAsync(cancellationToken);
+                var previa = importador.Analisar(Path.GetFileName(arquivo.FileName), conteudo);
+                if (previa.Lancamentos.Count > MaximoLancamentos)
+                    return BadRequest($"O arquivo contém mais de {MaximoLancamentos} lançamentos válidos. Divida o extrato em arquivos menores.");
+
+                var existentes = await _context.Transacoes.AsNoTracking().Where(t => t.UserId == CurrentUserId)
+                    .Select(t => new { t.Descricao, t.Valor, t.Tipo, t.DataCadastro }).ToListAsync(cancellationToken);
+                var fingerprints = existentes.Select(t => ExtratoImportador.Fingerprint(t.Descricao, t.Valor, t.Tipo.ToString(), t.DataCadastro)).ToHashSet(StringComparer.Ordinal);
+                var itens = previa.Lancamentos.Select(item =>
+                {
+                    var fingerprint = ExtratoImportador.Fingerprint(item.Descricao, item.Valor, item.TipoFormatado, item.Data);
+                    return item with { Duplicada = fingerprints.Contains(fingerprint) };
+                }).ToList();
+                return Ok(previa with { Lancamentos = itens, TotalDuplicados = itens.Count(item => item.Duplicada || item.DuplicadaNoArquivo) });
+            }
+            catch (FormatException ex) { return BadRequest(ex.Message); }
+            catch (IOException) { return BadRequest("Não foi possível ler o arquivo enviado."); }
+        }
+
+        [HttpPost("importacao")]
+        public async Task<ActionResult<ExtratoImportacaoResultadoDto>> ImportarExtrato(
+            [FromBody] ExtratoImportacaoConfirmacaoDto dto,
+            CancellationToken cancellationToken)
+        {
+            if (dto.Lancamentos.Count is < 1 or > MaximoLancamentos)
+                return BadRequest($"Selecione de 1 a {MaximoLancamentos} lançamentos para importar.");
+            var userId = CurrentUserId;
+            var existentes = await _context.Transacoes.AsNoTracking().Where(t => t.UserId == userId)
+                .Select(t => new { t.Descricao, t.Valor, t.Tipo, t.DataCadastro }).ToListAsync(cancellationToken);
+            var fingerprints = existentes.Select(t => ExtratoImportador.Fingerprint(t.Descricao, t.Valor, t.Tipo.ToString(), t.DataCadastro)).ToHashSet(StringComparer.Ordinal);
+            var novos = new List<Transacao>();
+            var ignorados = 0;
+            foreach (var item in dto.Lancamentos)
+            {
+                if (!Enum.IsDefined(item.Tipo) || item.Valor <= 0 || item.Valor > 99999999.99m || decimal.Round(item.Valor, 2) != item.Valor ||
+                    string.IsNullOrWhiteSpace(item.Descricao) || item.Descricao.Length > 100)
+                    return BadRequest("Um ou mais lançamentos têm dados inválidos.");
+                var data = item.Data.ToUniversalTime();
+                var fingerprint = ExtratoImportador.Fingerprint(item.Descricao, item.Valor, item.Tipo.ToString(), data);
+                if (!fingerprints.Add(fingerprint)) { ignorados++; continue; }
+                novos.Add(new Transacao { UserId = userId, Descricao = item.Descricao.Trim(), Valor = item.Valor, Tipo = item.Tipo, DataCadastro = data });
+            }
+            if (novos.Count > 0)
+            {
+                _context.Transacoes.AddRange(novos);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            return Ok(new ExtratoImportacaoResultadoDto(novos.Count, ignorados));
         }
 
         // 1. POST: api/transacao (Cadastrar uma Movimentação)

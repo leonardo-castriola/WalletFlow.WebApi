@@ -1,0 +1,217 @@
+@page "/transacoes/importar"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@using System.Globalization
+@using WalletFlow.Blazor.DTOs
+@using WalletFlow.Blazor.Enums
+@using WalletFlow.Blazor.Services
+@inject TransacaoApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Importar extrato | WalletFlow</PageTitle>
+
+<div class="dashboard-header import-header">
+    <div>
+        <p class="eyebrow">CONCILIAÇÃO BANCÁRIA</p>
+        <h1>Importar extrato</h1>
+        <p class="text-secondary">Envie um arquivo OFX ou CSV, confira os lançamentos e escolha o que deseja adicionar.</p>
+    </div>
+    <button class="btn btn-outline-secondary" @onclick='() => Navigation.NavigateTo("/transacoes")'>Voltar ao extrato</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_erro))
+{
+    <div class="alert alert-danger" role="alert">@_erro</div>
+}
+@if (!string.IsNullOrWhiteSpace(_mensagem))
+{
+    <div class="alert alert-success" role="status">@_mensagem</div>
+}
+
+<section class="panel import-upload-panel">
+    <div class="section-heading">
+        <div><p class="eyebrow">1. ENVIE SEU ARQUIVO</p><h2>Extrato bancário</h2></div>
+        <span class="file-format-badge">OFX ou CSV · até 5 MB</span>
+    </div>
+    <label class="import-dropzone" for="statement-file">
+        <span class="import-file-icon" aria-hidden="true">↑</span>
+        <strong>@(_arquivo?.Name ?? "Escolha um extrato para analisar")</strong>
+        <span>Arraste o arquivo para esta área ou selecione-o. CSV: colunas Data, Descrição e Valor; Tipo é opcional. OFX é lido automaticamente.</span>
+        <InputFile id="statement-file" OnChange="ArquivoSelecionado" accept=".ofx,.csv" disabled="@_processando" />
+    </label>
+    <div class="import-actions">
+        <button class="btn btn-primary" @onclick="AnalisarAsync" disabled="@(_arquivo is null || _processando)">
+            @(_processando ? "Analisando..." : "Analisar arquivo")
+        </button>
+        @if (_previa is not null)
+        {
+            <button class="btn btn-outline-secondary" @onclick="Limpar" disabled="@_processando">Escolher outro arquivo</button>
+        }
+    </div>
+</section>
+
+@if (_previa is not null)
+{
+    <section class="panel import-review-panel">
+        <div class="section-heading import-review-heading">
+            <div><p class="eyebrow">2. REVISE OS DADOS</p><h2>@_previa.NomeArquivo</h2></div>
+            <div class="import-summary">
+                <span>@_previa.Lancamentos.Count lançamento(s)</span>
+                @if (_previa.TotalDuplicados > 0) { <span class="duplicate-summary">@_previa.TotalDuplicados possível(is) duplicado(s)</span> }
+            </div>
+        </div>
+
+        @if (_previa.Erros.Count > 0)
+        {
+            <div class="import-row-errors" role="status">
+                <strong>@_previa.Erros.Count linha(s) não puderam ser interpretadas.</strong>
+                <ul>
+                    @foreach (var item in _previa.Erros.Take(8)) { <li>Linha @item.Linha: @item.Mensagem</li> }
+                    @if (_previa.Erros.Count > 8) { <li>e mais @(_previa.Erros.Count - 8) linha(s).</li> }
+                </ul>
+            </div>
+        }
+
+        @if (_previa.Lancamentos.Count == 0)
+        {
+            <p class="empty-state">Nenhum lançamento válido foi encontrado no arquivo.</p>
+        }
+        else
+        {
+            <div class="import-table-toolbar">
+                <span>@_selecionados.Count lançamento(s) selecionado(s) para importar</span>
+                <button class="btn btn-link" @onclick="SelecionarTodos" disabled="@_processando">Selecionar lançamentos sem duplicidade</button>
+            </div>
+            <div class="table-responsive import-table-wrap">
+                <table class="table transaction-table align-middle import-table">
+                    <thead><tr><th scope="col">Importar</th><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Tipo</th><th scope="col" class="text-end">Valor</th><th scope="col">Conciliação</th></tr></thead>
+                    <tbody>
+                        @foreach (var linha in _previa.Lancamentos)
+                        {
+                            <tr class="@(linha.EhDuplicada ? "import-duplicate-row" : string.Empty)">
+                                <td>
+                                    <input class="form-check-input" type="checkbox" aria-label="Importar @linha.Descricao" checked="@_selecionados.Contains(linha.Indice)"
+                                           disabled="@(linha.EhDuplicada || _processando)" @onchange="e => AlternarSelecao(linha.Indice, e.Value is true)" />
+                                </td>
+                                <td>@linha.Data.ToString("dd/MM/yyyy", Cultura)</td>
+                                <td class="transaction-description">@linha.Descricao</td>
+                                <td><span class="type-pill @(linha.TipoFormatado == "Receita" ? "income" : "expense")">@linha.TipoFormatado</span></td>
+                                <td class="text-end transaction-value">@linha.Valor.ToString("C", Cultura)</td>
+                                <td>
+                                    @if (linha.Duplicada) { <span class="reconciliation-status existing">Já consta no extrato</span> }
+                                    else if (linha.DuplicadaNoArquivo) { <span class="reconciliation-status repeated">Repetido no arquivo</span> }
+                                    else { <span class="reconciliation-status new-entry">Novo lançamento</span> }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="import-confirm-row">
+                <p class="text-secondary">Lançamentos já existentes ou repetidos dentro do arquivo ficam fora da importação.</p>
+                <button class="btn btn-primary" @onclick="ConfirmarImportacaoAsync" disabled="@(_selecionados.Count == 0 || _processando)">
+                    @(_processando ? "Importando..." : $"Importar {_selecionados.Count} lançamento(s)")
+                </button>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("pt-BR");
+    private const long TamanhoMaximoArquivo = 5 * 1024 * 1024;
+    private IBrowserFile? _arquivo;
+    private ExtratoImportacaoPreviaDto? _previa;
+    private readonly HashSet<int> _selecionados = [];
+    private bool _processando;
+    private string? _erro;
+    private string? _mensagem;
+
+    private void ArquivoSelecionado(InputFileChangeEventArgs args)
+    {
+        _erro = null;
+        _mensagem = null;
+        _previa = null;
+        _selecionados.Clear();
+        _arquivo = args.File;
+        if (_arquivo.Size > TamanhoMaximoArquivo)
+        {
+            _erro = "O arquivo excede o limite de 5 MB.";
+            _arquivo = null;
+        }
+    }
+
+    private async Task AnalisarAsync()
+    {
+        if (_arquivo is null) return;
+        _processando = true;
+        _erro = _mensagem = null;
+        _previa = null;
+        _selecionados.Clear();
+        try
+        {
+            await using var stream = _arquivo.OpenReadStream(TamanhoMaximoArquivo);
+            _previa = await Api.AnalisarExtratoAsync(stream, _arquivo.Name, _arquivo.ContentType);
+            foreach (var item in _previa.Lancamentos.Where(item => !item.EhDuplicada)) _selecionados.Add(item.Indice);
+            if (_previa.Lancamentos.Count == 0 && _previa.Erros.Count == 0)
+                _mensagem = "O arquivo foi lido, mas não contém lançamentos para revisar.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException)
+        {
+            _erro = ex.Message;
+        }
+        finally { _processando = false; }
+    }
+
+    private void AlternarSelecao(int indice, bool selecionado)
+    {
+        if (selecionado) _selecionados.Add(indice);
+        else _selecionados.Remove(indice);
+    }
+
+    private void SelecionarTodos()
+    {
+        if (_previa is null) return;
+        _selecionados.Clear();
+        foreach (var item in _previa.Lancamentos.Where(item => !item.EhDuplicada)) _selecionados.Add(item.Indice);
+    }
+
+    private async Task ConfirmarImportacaoAsync()
+    {
+        if (_previa is null || _selecionados.Count == 0) return;
+        _processando = true;
+        _erro = _mensagem = null;
+        try
+        {
+            var confirmacao = new ExtratoImportacaoConfirmacaoDto
+            {
+                Lancamentos = _previa.Lancamentos.Where(item => _selecionados.Contains(item.Indice)).Select(item => new ExtratoImportacaoItemDto
+                {
+                    Descricao = item.Descricao,
+                    Valor = item.Valor,
+                    Tipo = Enum.Parse<TipoTransacao>(item.TipoFormatado),
+                    Data = item.Data
+                }).ToList()
+            };
+            var resultado = await Api.ImportarExtratoAsync(confirmacao);
+            _mensagem = $"Importação concluída: {resultado.Importados} lançamento(s) adicionado(s)" +
+                         (resultado.IgnoradosComoDuplicados > 0 ? $" e {resultado.IgnoradosComoDuplicados} duplicado(s) ignorado(s)." : ".");
+            _previa = null;
+            _arquivo = null;
+            _selecionados.Clear();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException)
+        {
+            _erro = ex.Message;
+        }
+        finally { _processando = false; }
+    }
+
+    private void Limpar()
+    {
+        _arquivo = null;
+        _previa = null;
+        _selecionados.Clear();
+        _erro = _mensagem = null;
+    }
+}

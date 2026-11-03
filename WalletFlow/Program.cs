@@ -61,6 +61,7 @@ builder.Services.AddIdentityCore<WalletUser>()
 
 // Serviço financeiro
 builder.Services.AddScoped<IFinanceiroService, FinanceiroService>();
+builder.Services.AddSingleton<IExtratoImportador, ExtratoImportador>();
 
 // 2. CONSTRUÇÃO DA APLICAÇÃO
 var app = builder.Build();

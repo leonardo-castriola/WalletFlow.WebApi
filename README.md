@@ -16,6 +16,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 
 - Cadastro e consulta de transações.
 - Edição e exclusão de transações próprias, com confirmação antes de excluir.
+- Importação conciliada de extratos OFX e CSV: prévia antes de gravar, validação de linhas, identificação de duplicatas no histórico e no arquivo e confirmação dos lançamentos selecionados.
 - Extrato paginado, com limite de 100 itens por página.
 - Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
@@ -158,6 +159,8 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | `PUT` | `/api/Transacao/{id}` | Atualiza descrição, valor e tipo de uma transação própria |
 | `DELETE` | `/api/Transacao/{id}` | Exclui uma transação própria |
 | `GET` | `/api/Transacao/saldo` | Retorna o saldo do próprio usuário |
+| `POST` | `/api/Transacao/importacao/previa` | Analisa arquivo OFX/CSV (multipart, campo `arquivo`) e retorna prévia e duplicatas |
+| `POST` | `/api/Transacao/importacao` | Grava os lançamentos selecionados após revisão, ignorando duplicatas revalidadas |
 
 ### Interface Blazor
 
@@ -172,6 +175,9 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
 | Editar transação | `/transacoes/editar/{id}` | Atualizar descrição, valor e tipo de uma transação própria |
+| Importar extrato | `/transacoes/importar` | Analisar, revisar e importar lançamentos de arquivos OFX ou CSV |
+
+Na importação CSV, use cabeçalhos `Data`, `Descrição` e `Valor`; `Tipo` é opcional quando o valor tiver sinal. São reconhecidos separadores por vírgula, ponto e vírgula e tabulação; valores decimais podem usar vírgula ou ponto. Para identificar duplicatas, o sistema compara data, tipo, valor e descrição normalizada. O arquivo pode ter até 5 MB e 500 lançamentos válidos por importação; linhas inválidas aparecem na revisão e não são gravadas. A data do lançamento importado é preservada no extrato.
 
 Ao salvar uma transação válida, a aplicação persiste os dados pela API e exibe a confirmação. Fechar a mensagem limpa o formulário. Cancelar limpa os campos sem enviar um cadastro.
 

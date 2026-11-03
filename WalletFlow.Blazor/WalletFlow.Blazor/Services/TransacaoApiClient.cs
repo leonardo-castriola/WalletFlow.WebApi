@@ -98,6 +98,37 @@ public sealed class TransacaoApiClient(
         await GarantirSucessoAsync(response, cancellationToken);
     }
 
+    public async Task<ExtratoImportacaoPreviaDto> AnalisarExtratoAsync(
+        Stream arquivo,
+        string nomeArquivo,
+        string contentType,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Post, "api/Transacao/importacao/previa", cancellationToken);
+        using var multipart = new MultipartFormDataContent();
+        using var fileContent = new StreamContent(arquivo);
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+            string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType);
+        multipart.Add(fileContent, "arquivo", Path.GetFileName(nomeArquivo));
+        request.Content = multipart;
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoImportacaoAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ExtratoImportacaoPreviaDto>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("A API não retornou a prévia do extrato.");
+    }
+
+    public async Task<ExtratoImportacaoResultadoDto> ImportarExtratoAsync(
+        ExtratoImportacaoConfirmacaoDto confirmacao,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Post, "api/Transacao/importacao", cancellationToken);
+        request.Content = JsonContent.Create(confirmacao);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoImportacaoAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ExtratoImportacaoResultadoDto>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("A API não retornou o resultado da importação.");
+    }
+
     public async Task<decimal> ObterSaldoAsync(CancellationToken cancellationToken = default)
     {
         using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Get, "api/Transacao/saldo", cancellationToken);
@@ -149,6 +180,17 @@ public sealed class TransacaoApiClient(
         };
 
         throw new HttpRequestException(mensagem, null, response.StatusCode);
+    }
+
+    private static async Task GarantirSucessoImportacaoAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode) return;
+        var mensagem = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(mensagem))
+            mensagem = response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden
+                ? "A API não autorizou a operação. Entre novamente e tente outra vez."
+                : "Não foi possível processar o extrato. Confira o arquivo e tente novamente.";
+        throw new HttpRequestException(mensagem.Trim('"'), null, response.StatusCode);
     }
 
     private sealed class SaldoRespostaDto
