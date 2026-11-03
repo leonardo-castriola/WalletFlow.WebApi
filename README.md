@@ -15,6 +15,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 ## Funcionalidades
 
 - Cadastro e consulta de transações.
+- Edição e exclusão de transações próprias, com confirmação antes de excluir.
 - Extrato paginado, com limite de 100 itens por página.
 - Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
@@ -116,7 +117,7 @@ O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro confirma 
 
 As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimento, o host Blazor e a API já apontam para `WalletFlow/Wallet.db`. Em produção, configure o mesmo caminho absoluto em `ConnectionStrings__DefaultConnection` para os dois processos. As migrações são aplicadas na inicialização. Transações preexistentes ficam sem proprietário e não aparecem para nenhuma conta até serem associadas por um processo administrativo.
 
-O host Blazor deriva o ID do usuário da sessão autenticada e envia esse ID à API em uma chamada servidor-a-servidor. A API valida a conta e filtra listagem, busca por ID e saldo pelo proprietário. Em produção, mantenha a chave de serviço em `Authentication__ApiKey` nos dois processos; ela nunca é enviada pelo navegador. O Blazor e a API devem usar HTTPS.
+O host Blazor deriva o ID do usuário da sessão autenticada e envia esse ID à API em uma chamada servidor-a-servidor. A API valida a conta e restringe consulta, criação, edição, exclusão, listagem e saldo ao proprietário da transação. Em produção, mantenha a chave de serviço em `Authentication__ApiKey` nos dois processos; ela nunca é enviada pelo navegador. O Blazor e a API devem usar HTTPS.
 
 Para recuperação de senha, configure SMTP no host Blazor. Tokens de redefinição expiram após uma hora. Configure estes valores por variáveis de ambiente ou por um gerenciador de segredos; não grave credenciais no repositório:
 
@@ -154,6 +155,8 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | `GET` | `/api/Transacao?page=1&pageSize=50` | Lista as transações do usuário com paginação |
 | `GET` | `/api/Transacao/filtro?...` | Filtra as transações do usuário por tipo e período |
 | `GET` | `/api/Transacao/{id}` | Consulta uma transação do próprio usuário |
+| `PUT` | `/api/Transacao/{id}` | Atualiza descrição, valor e tipo de uma transação própria |
+| `DELETE` | `/api/Transacao/{id}` | Exclui uma transação própria |
 | `GET` | `/api/Transacao/saldo` | Retorna o saldo do próprio usuário |
 
 ### Interface Blazor
@@ -168,6 +171,7 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | Painel financeiro | `/painel` | Consultar saldo e movimentações recentes |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
+| Editar transação | `/transacoes/editar/{id}` | Atualizar descrição, valor e tipo de uma transação própria |
 
 Ao salvar uma transação válida, a aplicação persiste os dados pela API e exibe a confirmação. Fechar a mensagem limpa o formulário. Cancelar limpa os campos sem enviar um cadastro.
 
