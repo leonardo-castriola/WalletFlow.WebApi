@@ -5,10 +5,9 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
-using WalletFlow.WebApi.Data;
+using WalletFlow.Application.Abstractions;
 
-namespace WalletFlow.WebApi.Security;
+namespace WalletFlow.Api.Security;
 
 public sealed class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
@@ -17,7 +16,7 @@ public sealed class ApiKeyAuthenticationHandler : AuthenticationHandler<Authenti
 
     private readonly string? _expectedApiKey;
     private readonly bool _isDevelopment;
-    private readonly WalletDbContext _dbContext;
+    private readonly IUsuarioConsulta _usuarioConsulta;
 
     public ApiKeyAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -25,12 +24,12 @@ public sealed class ApiKeyAuthenticationHandler : AuthenticationHandler<Authenti
         UrlEncoder encoder,
         IConfiguration configuration,
         IWebHostEnvironment environment,
-        WalletDbContext dbContext)
+        IUsuarioConsulta usuarioConsulta)
         : base(options, logger, encoder)
     {
         _expectedApiKey = configuration["Authentication:ApiKey"];
         _isDevelopment = environment.IsDevelopment();
-        _dbContext = dbContext;
+        _usuarioConsulta = usuarioConsulta;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -53,8 +52,7 @@ public sealed class ApiKeyAuthenticationHandler : AuthenticationHandler<Authenti
             return AuthenticateResult.Fail("O identificador do usuário não foi informado.");
 
         var userId = providedUserId[0]!;
-        var userExists = await _dbContext.Users.AsNoTracking()
-            .AnyAsync(user => user.Id == userId, Context.RequestAborted);
+        var userExists = await _usuarioConsulta.ExisteAsync(userId, Context.RequestAborted);
         return userExists
             ? CreateSuccessResult(userId)
             : AuthenticateResult.Fail("O usuário informado não existe.");

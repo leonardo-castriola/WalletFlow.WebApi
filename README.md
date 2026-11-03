@@ -40,6 +40,19 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Swagger / Swashbuckle
 - xUnit
 
+## Arquitetura
+
+A solução separa o domínio, os casos de uso, a persistência e as interfaces externas em projetos distintos:
+
+- `WalletFlow.Domain`: entidades e tipos centrais do negócio, sem dependência de banco ou ASP.NET Core.
+- `WalletFlow.Application`: contratos, validações, importação de extratos e casos de uso; depende somente do domínio.
+- `WalletFlow.Infrastructure`: Entity Framework Core, SQLite, Identity, repositórios e migrações; implementa as abstrações da aplicação.
+- `WalletFlow`: API REST e autenticação HTTP. Os controllers encaminham as operações para os casos de uso.
+- `WalletFlow.Blazor`: interface web e composição dos serviços de Identity e infraestrutura.
+- `WalletFlow.Tests` e `WalletFlow.BrowserTests`: testes de unidade e navegação.
+
+As dependências seguem em direção ao domínio: Infrastructure implementa contratos definidos pela Application, enquanto API e Blazor compõem essas camadas na inicialização. O `WalletDbContext` e as migrações ficam em `WalletFlow.Infrastructure`.
+
 ## Pré-requisitos
 
 - .NET SDK 10.0.400 (a versão está fixada em `global.json`)
@@ -90,14 +103,14 @@ No Visual Studio, também é possível iniciar API e frontend simultaneamente us
 Também é possível aplicar as migrações pela Package Manager Console do Visual Studio:
 
 ```powershell
-Update-Database -Project WalletFlow -StartupProject WalletFlow
+Update-Database -Project WalletFlow.Infrastructure -StartupProject WalletFlow
 ```
 
 No terminal, restaure a ferramenta local do Entity Framework e aplique as migrações:
 
 ```bash
 dotnet tool restore
-dotnet ef database update --project WalletFlow/WalletFlow.csproj --startup-project WalletFlow/WalletFlow.csproj
+dotnet ef database update --project WalletFlow.Infrastructure/WalletFlow.Infrastructure.csproj --startup-project WalletFlow/WalletFlow.csproj --context WalletDbContext
 ```
 
 ### Terminal

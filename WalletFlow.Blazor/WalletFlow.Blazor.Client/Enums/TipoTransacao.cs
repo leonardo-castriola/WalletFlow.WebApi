@@ -1,4 +1,4 @@
-﻿namespace WalletFlow.Blazor.Enums
+namespace WalletFlow.Blazor.Enums
 {
     public enum TipoTransacao
     {

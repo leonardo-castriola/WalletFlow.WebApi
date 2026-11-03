@@ -2,13 +2,11 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.Sqlite;
-using WalletFlow.WebApi.Data;
-using WalletFlow.WebApi.Entities;
-using WalletFlow.WebApi.Security;
-using WalletFlow.WebApi.Services;
-using WalletFlow.WebApi.Middleware;
+using WalletFlow.Api.Middleware;
+using WalletFlow.Api.Security;
+using WalletFlow.Application.Abstractions;
+using WalletFlow.Application.Services;
+using WalletFlow.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,35 +43,16 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// Entity Framework Core com SQLite
-builder.Services.AddDbContext<WalletDbContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection não foi configurada.");
-    var sqliteConnection = new SqliteConnectionStringBuilder(connectionString);
-    if (!Path.IsPathRooted(sqliteConnection.DataSource))
-        sqliteConnection.DataSource = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, sqliteConnection.DataSource));
-    options.UseSqlite(sqliteConnection.ConnectionString);
-});
+builder.Services.AddWalletFlowInfrastructure(builder.Configuration, builder.Environment);
 
-builder.Services.AddIdentityCore<WalletUser>()
-    .AddEntityFrameworkStores<WalletDbContext>();
-
-// Serviço financeiro
-builder.Services.AddScoped<IFinanceiroService, FinanceiroService>();
+// Casos de uso da aplicação
+builder.Services.AddScoped<ITransacaoService, TransacaoService>();
 builder.Services.AddSingleton<IExtratoImportador, ExtratoImportador>();
 
 // 2. CONSTRUÇÃO DA APLICAÇÃO
 var app = builder.Build();
 
-// Aplica as migrações do banco de dados
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var dbContext = scope.ServiceProvider
-        .GetRequiredService<WalletDbContext>();
-
-    await dbContext.Database.MigrateAsync();
-}
+await app.Services.ApplyWalletFlowMigrationsAsync();
 
 // 3. PIPELINE DE REQUISIÇÕES
 

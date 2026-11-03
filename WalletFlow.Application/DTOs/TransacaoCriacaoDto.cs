@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using WalletFlow.WebApi.Enums;
+using System.ComponentModel.DataAnnotations;
+using WalletFlow.Domain.Enums;
 
-namespace WalletFlow.WebApi.DTOs
+namespace WalletFlow.Application.DTOs
 {
     public class TransacaoCriacaoDto : IValidatableObject
     {

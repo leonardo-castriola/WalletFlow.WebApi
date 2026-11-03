@@ -1,13 +1,12 @@
-﻿using System;
-using WalletFlow.WebApi.Enums;
+using System;
+using WalletFlow.Domain.Enums;
 
-namespace WalletFlow.WebApi.Entities
+namespace WalletFlow.Domain.Entities
 {
     public class Transacao
     {
         public int Id { get; set; }
         public string? UserId { get; set; }
-        public WalletUser? User { get; set; }
         public string Descricao { get; set; } = string.Empty;
         public decimal Valor { get; set; }
         public TipoTransacao Tipo { get; set; }

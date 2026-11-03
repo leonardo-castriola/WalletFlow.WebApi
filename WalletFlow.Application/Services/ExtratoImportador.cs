@@ -3,10 +3,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic.FileIO;
-using WalletFlow.WebApi.DTOs;
-using WalletFlow.WebApi.Enums;
+using WalletFlow.Application.DTOs;
+using WalletFlow.Application.Abstractions;
+using WalletFlow.Domain.Enums;
 
-namespace WalletFlow.WebApi.Services;
+namespace WalletFlow.Application.Services;
 
 public sealed class ExtratoImportador : IExtratoImportador
 {

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace WalletFlow.WebApi.DTOs;
+namespace WalletFlow.Application.DTOs;
 
 public sealed record ExtratoImportacaoLinhaDto(
     int Indice,
@@ -42,7 +42,7 @@ public sealed class ExtratoImportacaoItemDto
     public decimal Valor { get; set; }
 
     [Required]
-    public WalletFlow.WebApi.Enums.TipoTransacao Tipo { get; set; }
+    public WalletFlow.Domain.Enums.TipoTransacao Tipo { get; set; }
 
     public DateTimeOffset Data { get; set; }
 }

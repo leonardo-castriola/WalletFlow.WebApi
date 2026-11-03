@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
-using WalletFlow.WebApi.Entities;
+using WalletFlow.Infrastructure.Persistence;
 
 namespace WalletFlow.Blazor.Services;
 

@@ -1,6 +1,6 @@
-using WalletFlow.WebApi.DTOs;
+using WalletFlow.Application.DTOs;
 
-namespace WalletFlow.WebApi.Services;
+namespace WalletFlow.Application.Abstractions;
 
 public interface IExtratoImportador
 {

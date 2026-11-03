@@ -1,4 +1,4 @@
-﻿namespace WalletFlow.WebApi.Enums
+namespace WalletFlow.Domain.Enums
 {
     public enum TipoTransacao
     {

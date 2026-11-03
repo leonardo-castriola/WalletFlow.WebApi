@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace WalletFlow.WebApi.DTOs
+namespace WalletFlow.Application.DTOs
 {
     public class TransacaoRespostaDto
     {

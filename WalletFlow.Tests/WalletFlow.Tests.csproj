@@ -17,5 +17,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WalletFlow\WalletFlow.csproj" />
+    <ProjectReference Include="..\WalletFlow.Application\WalletFlow.Application.csproj" />
+    <ProjectReference Include="..\WalletFlow.Domain\WalletFlow.Domain.csproj" />
+    <ProjectReference Include="..\WalletFlow.Infrastructure\WalletFlow.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

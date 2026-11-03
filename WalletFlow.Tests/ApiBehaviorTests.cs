@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using WalletFlow.WebApi.Controllers;
-using WalletFlow.WebApi.Data;
-using WalletFlow.WebApi.Entities;
-using WalletFlow.WebApi.Enums;
-using WalletFlow.WebApi.Middleware;
+using WalletFlow.Api.Controllers;
+using WalletFlow.Infrastructure.Persistence;
+using WalletFlow.Domain.Entities;
+using WalletFlow.Domain.Enums;
+using WalletFlow.Api.Middleware;
+using WalletFlow.Application.Abstractions;
+using WalletFlow.Application.Services;
+using WalletFlow.Infrastructure.Repositories;
 using Xunit;
 using System.Security.Claims;
 
@@ -32,7 +35,9 @@ public sealed class ApiBehaviorTests
             new Transacao { UserId = "user-1", Descricao = "Receita fora do período", Valor = 30, Tipo = TipoTransacao.Receita, DataCadastro = data.AddDays(5) });
         await context.SaveChangesAsync();
 
-        var controller = new TransacaoController(context, new WalletFlow.WebApi.Services.FinanceiroService(context));
+        var repository = new EfTransacaoRepository(context);
+        var service = new TransacaoService(repository, new FinanceiroService(context), new ExtratoImportador());
+        var controller = new TransacaoController(service);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -43,7 +48,7 @@ public sealed class ApiBehaviorTests
         };
         var action = await controller.ObterFiltrado(TipoTransacao.Receita, data, data.AddDays(3), page: 2, pageSize: 1);
         var result = Assert.IsType<OkObjectResult>(action.Result);
-        var page = Assert.IsType<WalletFlow.WebApi.DTOs.ResultadoPaginadoDto<WalletFlow.WebApi.DTOs.TransacaoRespostaDto>>(result.Value);
+        var page = Assert.IsType<WalletFlow.Application.DTOs.ResultadoPaginadoDto<WalletFlow.Application.DTOs.TransacaoRespostaDto>>(result.Value);
 
         Assert.Equal(2, page.TotalCount);
         Assert.Equal(2, page.TotalPages);
@@ -53,7 +58,7 @@ public sealed class ApiBehaviorTests
         var primeiraPaginaAction = await controller.ObterFiltrado(
             TipoTransacao.Receita, data, data.AddDays(3), page: 1, pageSize: 1);
         var primeiraPaginaResult = Assert.IsType<OkObjectResult>(primeiraPaginaAction.Result);
-        var primeiraPagina = Assert.IsType<WalletFlow.WebApi.DTOs.ResultadoPaginadoDto<WalletFlow.WebApi.DTOs.TransacaoRespostaDto>>(primeiraPaginaResult.Value);
+        var primeiraPagina = Assert.IsType<WalletFlow.Application.DTOs.ResultadoPaginadoDto<WalletFlow.Application.DTOs.TransacaoRespostaDto>>(primeiraPaginaResult.Value);
         Assert.Equal("Receita 2", Assert.Single(primeiraPagina.Items).Descricao);
     }
 

@@ -3,11 +3,9 @@ using WalletFlow.Blazor.Components;
 using WalletFlow.Blazor.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using WalletFlow.WebApi.Data;
-using WalletFlow.WebApi.Entities;
-using WalletFlow.WebApi.Services;
+using WalletFlow.Application.Services;
+using WalletFlow.Infrastructure;
+using WalletFlow.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,13 +15,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents()
     .AddAuthenticationStateSerialization();
 
-var databaseConnection = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection não foi configurada.");
-var sqliteConnection = new SqliteConnectionStringBuilder(databaseConnection);
-if (!Path.IsPathRooted(sqliteConnection.DataSource))
-    sqliteConnection.DataSource = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, sqliteConnection.DataSource));
-
-builder.Services.AddDbContext<WalletDbContext>(options => options.UseSqlite(sqliteConnection.ConnectionString));
+builder.Services.AddWalletFlowInfrastructure(builder.Configuration, builder.Environment);
 builder.Services.AddIdentityCore<WalletUser>(options =>
 {
     options.User.RequireUniqueEmail = true;
@@ -65,7 +57,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<WalletFlow.Application.Abstractions.IEmailSender, SmtpEmailSender>();
 
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"];
 if (!Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiBaseUri) ||
@@ -103,11 +95,7 @@ builder.Services.AddHttpClient<TransacaoApiClient>(client =>
 
 var app = builder.Build();
 
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<WalletDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
+await app.Services.ApplyWalletFlowMigrationsAsync();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

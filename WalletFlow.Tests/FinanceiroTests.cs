@@ -1,10 +1,10 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using WalletFlow.WebApi.Data;
-using WalletFlow.WebApi.DTOs;
-using WalletFlow.WebApi.Entities;
-using WalletFlow.WebApi.Enums;
-using WalletFlow.WebApi.Services;
+using WalletFlow.Infrastructure.Persistence;
+using WalletFlow.Application.DTOs;
+using WalletFlow.Domain.Entities;
+using WalletFlow.Domain.Enums;
+using WalletFlow.Infrastructure.Repositories;
 using System.ComponentModel.DataAnnotations;
 using Xunit;
 
@@ -24,7 +24,7 @@ public sealed class FinanceiroTests
     public async Task SaldoPodeFicarNegativoQuandoDespesasSuperamReceitas()
     {
         await using var database = await TestDatabase.CriarAsync();
-        database.Context.Users.Add(new WalletFlow.WebApi.Entities.WalletUser { Id = "user-1", UserName = "user-1" });
+        database.Context.Users.Add(new WalletUser { Id = "user-1", UserName = "user-1" });
         await database.Context.SaveChangesAsync();
         database.Context.Transacoes.AddRange(
             new Transacao { UserId = "user-1", Descricao = "Receita", Valor = 100m, Tipo = TipoTransacao.Receita },

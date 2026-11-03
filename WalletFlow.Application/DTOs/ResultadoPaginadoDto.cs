@@ -1,4 +1,4 @@
-namespace WalletFlow.WebApi.DTOs;
+namespace WalletFlow.Application.DTOs;
 
 public sealed class ResultadoPaginadoDto<T>
 {

@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 
-namespace WalletFlow.WebApi.Services
+namespace WalletFlow.Application.Abstractions
 {
     public interface IFinanceiroService
     {

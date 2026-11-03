@@ -1,7 +1,7 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
-using WalletFlow.WebApi.Services;
+using WalletFlow.Application.Abstractions;
 
 namespace WalletFlow.Blazor.Services;
 

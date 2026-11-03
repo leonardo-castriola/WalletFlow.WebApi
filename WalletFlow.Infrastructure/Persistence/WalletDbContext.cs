@@ -1,9 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using WalletFlow.WebApi.Entities;
-
+using Microsoft.EntityFrameworkCore;
+using WalletFlow.Domain.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
-namespace WalletFlow.WebApi.Data
+namespace WalletFlow.Infrastructure.Persistence
 {
     public class WalletDbContext : IdentityDbContext<WalletUser>
     {
@@ -19,7 +18,7 @@ namespace WalletFlow.WebApi.Data
 
             builder.Entity<Transacao>().HasIndex(transacao => transacao.UserId);
             builder.Entity<Transacao>()
-                .HasOne(transacao => transacao.User)
+                .HasOne<WalletUser>()
                 .WithMany()
                 .HasForeignKey(transacao => transacao.UserId)
                 .OnDelete(DeleteBehavior.Restrict);

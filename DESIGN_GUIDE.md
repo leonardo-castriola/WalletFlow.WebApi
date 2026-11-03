@@ -86,3 +86,11 @@ Baseie os intervalos em múltiplos de `4px` (`0.25rem`).
 ## Biblioteca de componentes
 
 O projeto já inclui Bootstrap e tem poucas telas e controles simples. Não recomendo instalar MudBlazor ou Fluent UI nesta etapa: uma segunda biblioteca aumentaria o bundle, a configuração e a mistura de convenções visuais sem resolver uma necessidade atual. Os componentes nativos do Blazor, estilizados com Bootstrap e CSS isolado, cobrem os formulários, botões, navegação e tabelas existentes. Reavalie se o produto passar a precisar de grades de dados avançadas, componentes complexos ou um conjunto amplo de padrões interativos.
+# Arquitetura de software
+
+- `WalletFlow.Domain` mantém entidades e enums sem dependências de infraestrutura.
+- `WalletFlow.Application` define os casos de uso e contratos consumidos por API e infraestrutura.
+- `WalletFlow.Infrastructure` implementa persistência SQLite, Identity e migrações.
+- `WalletFlow` hospeda a API, autenticação por chave e controllers finos.
+- `WalletFlow.Blazor` hospeda a interface e configura Identity para as páginas de conta.
+- Mantenha regras de aplicação fora dos controllers e do Entity Framework. Novos adaptadores devem implementar contratos definidos em Application.

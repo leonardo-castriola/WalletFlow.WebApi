@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace WalletFlow.WebApi.Entities;
+namespace WalletFlow.Infrastructure.Persistence;
 
 public sealed class WalletUser : IdentityUser
 {

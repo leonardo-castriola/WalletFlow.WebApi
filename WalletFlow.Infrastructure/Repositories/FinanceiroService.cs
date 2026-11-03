@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using WalletFlow.WebApi.Data;
+using Microsoft.EntityFrameworkCore;
+using WalletFlow.Infrastructure.Persistence;
+using WalletFlow.Application.Abstractions;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace WalletFlow.WebApi.Services
+namespace WalletFlow.Infrastructure.Repositories
 {
     public class FinanceiroService : IFinanceiroService
     {

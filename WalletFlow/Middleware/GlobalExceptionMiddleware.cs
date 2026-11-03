@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace WalletFlow.WebApi.Middleware;
+namespace WalletFlow.Api.Middleware;
 
 public sealed class GlobalExceptionMiddleware
 {

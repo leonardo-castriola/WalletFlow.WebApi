@@ -1,4 +1,4 @@
-namespace WalletFlow.WebApi.Services;
+namespace WalletFlow.Application.Abstractions;
 
 public interface IEmailSender
 {
