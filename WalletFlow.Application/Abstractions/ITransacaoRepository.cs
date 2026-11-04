@@ -1,10 +1,12 @@
 using WalletFlow.Domain.Entities;
 using WalletFlow.Domain.Enums;
+using WalletFlow.Application.DTOs;
 
 namespace WalletFlow.Application.Abstractions;
 
 public interface ITransacaoRepository
 {
+    Task<IReadOnlyList<ResumoMensalTransacao>> ObterResumoMensalAsync(string userId, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<Transacao> Items, int TotalCount)> ListarAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<Transacao> Items, int TotalCount)> FiltrarAsync(string userId, TipoTransacao? tipo, DateTimeOffset? dataInicio, DateTimeOffset? dataFim, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<Transacao?> ObterAsync(string userId, int id, CancellationToken cancellationToken = default);

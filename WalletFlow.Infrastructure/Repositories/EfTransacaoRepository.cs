@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WalletFlow.Application.Abstractions;
+using WalletFlow.Application.DTOs;
 using WalletFlow.Domain.Entities;
 using WalletFlow.Domain.Enums;
 using WalletFlow.Infrastructure.Persistence;
@@ -10,6 +11,22 @@ namespace WalletFlow.Infrastructure.Repositories;
 
 public sealed class EfTransacaoRepository(WalletDbContext context) : ITransacaoRepository
 {
+    public async Task<IReadOnlyList<ResumoMensalTransacao>> ObterResumoMensalAsync(string userId, CancellationToken cancellationToken = default) =>
+        await context.Database.SqlQueryRaw<ResumoMensalTransacao>(
+                """
+                SELECT
+                    CAST(strftime('%Y', "DataCadastro") AS INTEGER) AS "Ano",
+                    CAST(strftime('%m', "DataCadastro") AS INTEGER) AS "Mes",
+                    COALESCE(SUM(CASE WHEN "Tipo" = 1 THEN "Valor" ELSE 0 END), 0) AS "Receitas",
+                    COALESCE(SUM(CASE WHEN "Tipo" = 0 THEN "Valor" ELSE 0 END), 0) AS "Despesas"
+                FROM "Transacoes"
+                WHERE "UserId" = @userId
+                GROUP BY strftime('%Y-%m', "DataCadastro")
+                ORDER BY strftime('%Y-%m', "DataCadastro")
+                """,
+                new SqliteParameter("@userId", userId))
+            .ToListAsync(cancellationToken);
+
     public async Task<(IReadOnlyList<Transacao> Items, int TotalCount)> ListarAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var query = context.Transacoes.AsNoTracking().Where(t => t.UserId == userId);

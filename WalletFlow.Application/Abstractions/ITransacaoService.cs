@@ -12,6 +12,7 @@ public interface ITransacaoService
     Task<bool> AtualizarAsync(string userId, int id, TransacaoCriacaoDto dto, CancellationToken cancellationToken = default);
     Task<bool> ExcluirAsync(string userId, int id, CancellationToken cancellationToken = default);
     Task<decimal> ObterSaldoAsync(string userId, CancellationToken cancellationToken = default);
+    Task<EvolucaoFinanceiraDto> ObterEvolucaoMensalAsync(string userId, int ano, int mes, CancellationToken cancellationToken = default);
     Task<ExtratoImportacaoPreviaDto> AnalisarExtratoAsync(string userId, string nomeArquivo, string conteudo, CancellationToken cancellationToken = default);
     Task<ExtratoImportacaoResultadoDto> ImportarExtratoAsync(string userId, ExtratoImportacaoConfirmacaoDto dto, CancellationToken cancellationToken = default);
 }

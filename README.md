@@ -20,6 +20,8 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Extrato paginado, com limite de 100 itens por página.
 - Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
+- Gráficos no painel com despesas mensais e evolução de receitas, despesas e saldo acumulado nos últimos seis meses.
+- Gráfico de pizza com a participação de cada mês no total de receitas dos últimos seis meses, acompanhado de valores e percentuais.
 - Migrações do Entity Framework Core aplicadas durante a inicialização.
 - Middleware global que registra exceções no servidor e responde com um erro seguro.
 - Autenticação por chave de API fora do ambiente de desenvolvimento.
@@ -172,6 +174,7 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | `PUT` | `/api/Transacao/{id}` | Atualiza descrição, valor e tipo de uma transação própria |
 | `DELETE` | `/api/Transacao/{id}` | Exclui uma transação própria |
 | `GET` | `/api/Transacao/saldo` | Retorna o saldo do próprio usuário |
+| `GET` | `/api/Transacao/evolucao-mensal?ano=2026&mes=11` | Retorna os totais mensais dos últimos seis meses para os gráficos do painel |
 | `POST` | `/api/Transacao/importacao/previa` | Analisa arquivo OFX/CSV (multipart, campo `arquivo`) e retorna prévia e duplicatas |
 | `POST` | `/api/Transacao/importacao` | Grava os lançamentos selecionados após revisão, ignorando duplicatas revalidadas |
 
@@ -184,7 +187,7 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | Recuperar senha | `/esqueci-a-senha` | Solicitar link de redefinição por e-mail |
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
-| Painel financeiro | `/painel` | Consultar saldo e movimentações recentes |
+| Painel financeiro | `/painel` | Consultar saldo, movimentações recentes e gráficos financeiros dos últimos seis meses |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
 | Editar transação | `/transacoes/editar/{id}` | Atualizar descrição, valor e tipo de uma transação própria |

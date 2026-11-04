@@ -141,6 +141,20 @@ public sealed class TransacaoApiClient(
                ?? throw new InvalidOperationException("A API não retornou o saldo consolidado.");
     }
 
+    public async Task<EvolucaoFinanceiraDto> ObterEvolucaoMensalAsync(CancellationToken cancellationToken = default)
+    {
+        var mesAtual = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, _timeZone).DateTime);
+        using var request = await CreateAuthenticatedRequestAsync(
+            HttpMethod.Get,
+            $"api/Transacao/evolucao-mensal?ano={mesAtual.Year.ToString(CultureInfo.InvariantCulture)}&mes={mesAtual.Month.ToString(CultureInfo.InvariantCulture)}",
+            cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<EvolucaoFinanceiraDto>(cancellationToken: cancellationToken)
+               ?? throw new InvalidOperationException("A API não retornou a evolução financeira.");
+    }
+
     private static string InicioDoDiaUtc(DateOnly data, TimeZoneInfo timeZone) =>
         new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(
             data.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), timeZone), TimeSpan.Zero)

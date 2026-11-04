@@ -66,6 +66,33 @@ public sealed class TransacaoService(
     public Task<decimal> ObterSaldoAsync(string userId, CancellationToken cancellationToken = default) =>
         financeiroService.CalcularSaldoConsolidadoAsync(userId, cancellationToken);
 
+    public async Task<EvolucaoFinanceiraDto> ObterEvolucaoMensalAsync(string userId, int ano, int mes, CancellationToken cancellationToken = default)
+    {
+        if (mes is < 1 or > 12 || ano is < 1 or > 9998)
+            throw new ArgumentOutOfRangeException(nameof(mes), "Informe um mês e ano válidos.");
+
+        var mesFinal = new DateOnly(ano, mes, 1);
+        var primeiroMes = mesFinal.AddMonths(-5);
+        var resumoMensal = await repository.ObterResumoMensalAsync(userId, cancellationToken);
+        var resumosPorMes = resumoMensal.ToDictionary(item => (item.Ano, item.Mes));
+        var saldo = resumoMensal
+            .Where(item => item.Ano < primeiroMes.Year || item.Ano == primeiroMes.Year && item.Mes < primeiroMes.Month)
+            .Sum(item => item.Receitas - item.Despesas);
+        var pontos = new List<PontoEvolucaoFinanceiraDto>(6);
+
+        for (var indice = 0; indice < 6; indice++)
+        {
+            var dataMes = primeiroMes.AddMonths(indice);
+            resumosPorMes.TryGetValue((dataMes.Year, dataMes.Month), out var resumo);
+            var receitas = resumo?.Receitas ?? 0m;
+            var despesas = resumo?.Despesas ?? 0m;
+            saldo += receitas - despesas;
+            pontos.Add(new PontoEvolucaoFinanceiraDto(dataMes, receitas, despesas, saldo));
+        }
+
+        return new EvolucaoFinanceiraDto(pontos);
+    }
+
     public async Task<ExtratoImportacaoPreviaDto> AnalisarExtratoAsync(string userId, string nomeArquivo, string conteudo, CancellationToken cancellationToken = default)
     {
         var previa = extratoImportador.Analisar(nomeArquivo, conteudo);

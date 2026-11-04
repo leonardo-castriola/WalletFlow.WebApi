@@ -119,6 +119,18 @@ public sealed class TransacaoController(ITransacaoService transacoes) : Controll
     public async Task<ActionResult<decimal>> ObterSaldoConsolidado(CancellationToken cancellationToken) =>
         Ok(new { saldoConsolidado = await transacoes.ObterSaldoAsync(CurrentUserId, cancellationToken) });
 
+    [HttpGet("evolucao-mensal")]
+    public async Task<ActionResult<EvolucaoFinanceiraDto>> ObterEvolucaoMensal(
+        [FromQuery] int ano,
+        [FromQuery] int mes,
+        CancellationToken cancellationToken)
+    {
+        if (mes is < 1 or > 12 || ano is < 1 or > 9998)
+            return BadRequest("Informe um mês e ano válidos.");
+
+        return Ok(await transacoes.ObterEvolucaoMensalAsync(CurrentUserId, ano, mes, cancellationToken));
+    }
+
     private static bool PaginacaoValida(int page, int pageSize) =>
         page >= 1 && pageSize is >= 1 and <= 100 && (long)(page - 1) * pageSize <= int.MaxValue;
 }
