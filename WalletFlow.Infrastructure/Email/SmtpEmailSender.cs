@@ -1,9 +1,11 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using WalletFlow.Application.Abstractions;
 
-namespace WalletFlow.Blazor.Services;
+namespace WalletFlow.Infrastructure.Email;
 
 public sealed class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEmailSender> logger) : IEmailSender
 {
@@ -26,22 +28,16 @@ public sealed class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEm
             throw new InvalidOperationException(
                 $"Configuração SMTP incompleta. Verifique: {string.Join(", ", missingSettings)}.");
 
-        var smtpHost = host!;
-        var smtpPort = port!.Value;
-        var smtpUsername = username!;
-        var smtpPassword = password!;
-        var smtpSenderAddress = senderAddress!;
-
         var message = new MimeMessage();
-        message.From.Add(MailboxAddress.Parse(smtpSenderAddress));
+        message.From.Add(MailboxAddress.Parse(senderAddress!));
         message.To.Add(MailboxAddress.Parse(recipient));
         message.Subject = subject;
         message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
 
         using var client = new SmtpClient();
         var socketOptions = implicitTls ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
-        await client.ConnectAsync(smtpHost, smtpPort, socketOptions, cancellationToken);
-        await client.AuthenticateAsync(smtpUsername, smtpPassword, cancellationToken);
+        await client.ConnectAsync(host!, port!.Value, socketOptions, cancellationToken);
+        await client.AuthenticateAsync(username!, password!, cancellationToken);
         await client.SendAsync(message, cancellationToken);
         logger.LogInformation("The SMTP server accepted an outbound email.");
         await client.DisconnectAsync(true, cancellationToken);

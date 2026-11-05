@@ -15,6 +15,10 @@ public sealed class TransacaoApiClient(
 {
     private readonly TimeZoneInfo _timeZone = TimeZoneInfo.FindSystemTimeZoneById(
         configuration["Filters:TimeZoneId"] ?? "America/Sao_Paulo");
+
+    public DateTimeOffset ConverterParaFusoConfigurado(DateTimeOffset data) =>
+        TimeZoneInfo.ConvertTime(data, _timeZone);
+
     public async Task<ResultadoPaginadoDto<TransacaoRespostaDto>> ObterTransacoesAsync(
         int page,
         int pageSize,
@@ -48,6 +52,26 @@ public sealed class TransacaoApiClient(
         return await response.Content.ReadFromJsonAsync<ResultadoPaginadoDto<TransacaoRespostaDto>>(
                    cancellationToken: cancellationToken)
                ?? throw new InvalidOperationException("A API retornou uma resposta vazia para o extrato.");
+    }
+
+    public async Task<IReadOnlyList<TransacaoRespostaDto>> ObterTodasTransacoesAsync(
+        TipoTransacao? tipo,
+        DateOnly? dataInicio,
+        DateOnly? dataFim,
+        CancellationToken cancellationToken = default)
+    {
+        const int pageSize = 100;
+        var primeiraPagina = await ObterTransacoesAsync(1, pageSize, tipo, dataInicio, dataFim, cancellationToken);
+        var transacoes = new List<TransacaoRespostaDto>(primeiraPagina.TotalCount);
+        transacoes.AddRange(primeiraPagina.Items);
+
+        for (var page = 2; page <= primeiraPagina.TotalPages; page++)
+        {
+            var resultado = await ObterTransacoesAsync(page, pageSize, tipo, dataInicio, dataFim, cancellationToken);
+            transacoes.AddRange(resultado.Items);
+        }
+
+        return transacoes;
     }
 
     public async Task<TransacaoRespostaDto> CriarTransacaoAsync(

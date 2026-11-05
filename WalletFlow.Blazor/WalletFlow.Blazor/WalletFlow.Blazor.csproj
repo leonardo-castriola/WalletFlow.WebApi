@@ -13,8 +13,7 @@
     <ProjectReference Include="..\..\WalletFlow.Application\WalletFlow.Application.csproj" />
     <ProjectReference Include="..\..\WalletFlow.Domain\WalletFlow.Domain.csproj" />
     <ProjectReference Include="..\..\WalletFlow.Infrastructure\WalletFlow.Infrastructure.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
-    <PackageReference Include="MailKit" Version="4.18.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
   </ItemGroup>
 
 </Project>

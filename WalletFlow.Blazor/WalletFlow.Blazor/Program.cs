@@ -57,7 +57,6 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-builder.Services.AddScoped<WalletFlow.Application.Abstractions.IEmailSender, SmtpEmailSender>();
 
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"];
 if (!Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiBaseUri) ||

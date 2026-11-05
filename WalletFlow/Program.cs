@@ -7,6 +7,7 @@ using WalletFlow.Api.Security;
 using WalletFlow.Application.Abstractions;
 using WalletFlow.Application.Services;
 using WalletFlow.Infrastructure;
+using WalletFlow.Api.Background;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +49,8 @@ builder.Services.AddWalletFlowInfrastructure(builder.Configuration, builder.Envi
 // Casos de uso da aplicação
 builder.Services.AddScoped<ITransacaoService, TransacaoService>();
 builder.Services.AddSingleton<IExtratoImportador, ExtratoImportador>();
+builder.Services.Configure<MonthlyReportScheduleOptions>(builder.Configuration.GetSection("Reports:Monthly"));
+builder.Services.AddHostedService<MonthlyFinancialReportBackgroundService>();
 
 // 2. CONSTRUÇÃO DA APLICAÇÃO
 var app = builder.Build();

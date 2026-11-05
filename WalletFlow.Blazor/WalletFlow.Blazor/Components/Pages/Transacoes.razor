@@ -4,8 +4,15 @@
 @using WalletFlow.Blazor.DTOs
 @using WalletFlow.Blazor.Enums
 @using WalletFlow.Blazor.Services
+@using WalletFlow.Infrastructure.Persistence
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
 @inject TransacaoApiClient Api
 @inject NavigationManager Navigation
+@inject UserManager<WalletUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject WalletFlow.Application.Abstractions.IEmailSender EmailSender
+@inject ILogger<Transacoes> Logger
 
 <PageTitle>Extrato | WalletFlow</PageTitle>
 
@@ -48,8 +55,12 @@
         <div class="filter-actions">
             <button type="submit" class="btn btn-primary" disabled="@_carregando">Filtrar</button>
             <button type="button" class="btn btn-link" @onclick="LimparFiltrosAsync">Limpar</button>
+            <button type="button" class="btn btn-outline-primary" @onclick="EnviarExtratoPorEmailAsync" disabled="@(_carregando || _enviandoEmail)">
+                @(_enviandoEmail ? "Enviando..." : "✉ Enviar para meu e-mail")
+            </button>
         </div>
     </form>
+    <p class="statement-email-note">O extrato do período selecionado será enviado para o e-mail da sua conta.</p>
 
     @if (_carregando)
     {
@@ -69,7 +80,7 @@
                     {
                         <tr>
                             <td class="transaction-description">@transacao.Descricao</td>
-                            <td>@transacao.DataCadastro.ToLocalTime().ToString("dd/MM/yyyy", Cultura)</td>
+                            <td>@Api.ConverterParaFusoConfigurado(transacao.DataCadastro).ToString("dd/MM/yyyy", Cultura)</td>
                             <td><span class="type-pill @(transacao.TipoFormatado == "Receita" ? "income" : "expense")">@transacao.TipoFormatado</span></td>
                             <td class="text-end transaction-value">@transacao.Valor.ToString("C", Cultura)</td>
                             <td class="text-end transaction-actions">
@@ -110,6 +121,7 @@
     private string? _mensagem;
     private bool _carregando = true;
     private bool _excluindo;
+    private bool _enviandoEmail;
     private int? _exclusaoPendenteId;
     private int _pagina = 1;
     private const int ItensPorPagina = 10;
@@ -136,9 +148,18 @@
                 ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
                 : ex.Message;
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException ex) when (
+            ex.Message.StartsWith("Informe uma data", StringComparison.Ordinal) ||
+            ex.Message.StartsWith("A data inicial", StringComparison.Ordinal) ||
+            ex.Message.StartsWith("Selecione ao menos uma data", StringComparison.Ordinal) ||
+            ex.Message.StartsWith("Selecione um tipo", StringComparison.Ordinal))
         {
             _erro = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.LogError(ex, "Configuração inválida ao enviar o extrato por e-mail.");
+            _erro = "Não foi possível enviar o extrato por e-mail. Verifique a configuração do serviço de e-mail e tente novamente.";
         }
         finally
         {
@@ -150,6 +171,98 @@
     private async Task LimparFiltrosAsync() { _tipoFiltro = _dataInicio = _dataFim = string.Empty; _pagina = 1; await CarregarAsync(); }
     private async Task PaginaAnteriorAsync() { if (_pagina > 1) { _pagina--; await CarregarAsync(); } }
     private async Task ProximaPaginaAsync() { if (_resultado is not null && _pagina < _resultado.TotalPages) { _pagina++; await CarregarAsync(); } }
+
+    private async Task EnviarExtratoPorEmailAsync()
+    {
+        if (_enviandoEmail || _carregando)
+            return;
+
+        _erro = null;
+        _mensagem = null;
+        _enviandoEmail = true;
+
+        try
+        {
+            var inicio = LerData(_dataInicio, "inicial");
+            var fim = LerData(_dataFim, "final");
+            if (!inicio.HasValue && !fim.HasValue)
+                throw new InvalidOperationException("Selecione ao menos uma data para definir o período do extrato.");
+            if (inicio.HasValue && fim.HasValue && inicio.Value > fim.Value)
+                throw new InvalidOperationException("A data inicial deve ser anterior ou igual à data final.");
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserManager.GetUserAsync(authState.User);
+            if (string.IsNullOrWhiteSpace(user?.Email))
+                throw new UnauthorizedAccessException("Não foi possível identificar o e-mail da sua conta. Entre novamente.");
+
+            var tipo = LerTipoFiltro();
+            var transacoes = await Api.ObterTodasTransacoesAsync(tipo, inicio, fim);
+            var html = MontarExtratoHtml(transacoes, inicio, fim, tipo);
+            var periodo = $"{inicio?.ToString("dd/MM/yyyy", Cultura) ?? "início"} a {fim?.ToString("dd/MM/yyyy", Cultura) ?? "hoje"}";
+            await EmailSender.SendAsync(user.Email, $"Seu extrato WalletFlow — {periodo}", html);
+
+            _mensagem = $"Extrato do período enviado para {user.Email}.";
+        }
+        catch (HttpRequestException ex)
+        {
+            _erro = ex.StatusCode is null
+                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                : ex.Message;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _erro = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _erro = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha ao enviar o extrato do período para o e-mail da conta autenticada.");
+            _erro = "Não foi possível enviar o extrato por e-mail. Verifique a configuração do serviço de e-mail e tente novamente.";
+        }
+        finally
+        {
+            _enviandoEmail = false;
+        }
+    }
+
+    private string MontarExtratoHtml(
+        IReadOnlyList<TransacaoRespostaDto> transacoes,
+        DateOnly? inicio,
+        DateOnly? fim,
+        TipoTransacao? tipo)
+    {
+        var receitas = transacoes.Where(item => item.TipoFormatado == "Receita").Sum(item => item.Valor);
+        var despesas = transacoes.Where(item => item.TipoFormatado == "Despesa").Sum(item => item.Valor);
+        var periodo = $"{inicio?.ToString("dd/MM/yyyy", Cultura) ?? "Início"} a {fim?.ToString("dd/MM/yyyy", Cultura) ?? "hoje"}";
+        var tipoSelecionado = tipo?.ToString() ?? "Todos";
+        var linhas = string.Join(Environment.NewLine, transacoes.Select(item => $"""
+            <tr>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb">{System.Net.WebUtility.HtmlEncode(item.Descricao)}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb">{Api.ConverterParaFusoConfigurado(item.DataCadastro).ToString("dd/MM/yyyy", Cultura)}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb">{System.Net.WebUtility.HtmlEncode(item.TipoFormatado)}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right">{item.Valor.ToString("C", Cultura)}</td>
+            </tr>
+            """));
+
+        if (string.IsNullOrWhiteSpace(linhas))
+            linhas = "<tr><td colspan=\"4\" style=\"padding:12px;text-align:center\">Nenhuma movimentação encontrada.</td></tr>";
+
+        return $"""
+            <div style="font-family:Arial,sans-serif;color:#172b4d;max-width:760px;margin:auto">
+              <h2>Seu extrato WalletFlow</h2>
+              <p>Período: <strong>{periodo}</strong> · Tipo: <strong>{tipoSelecionado}</strong></p>
+              <p>Receitas: <strong>{receitas.ToString("C", Cultura)}</strong> &nbsp; Despesas: <strong>{despesas.ToString("C", Cultura)}</strong> &nbsp; Saldo do período: <strong>{(receitas - despesas).ToString("C", Cultura)}</strong></p>
+              <table style="border-collapse:collapse;width:100%;text-align:left">
+                <thead><tr style="background:#f3f6fb"><th style="padding:8px">Descrição</th><th style="padding:8px">Data</th><th style="padding:8px">Tipo</th><th style="padding:8px;text-align:right">Valor</th></tr></thead>
+                <tbody>{linhas}</tbody>
+              </table>
+              <p style="color:#64748b;font-size:12px">Enviado pelo WalletFlow para o endereço de e-mail da sua conta.</p>
+            </div>
+            """;
+    }
 
     private void SolicitarExclusao(int id)
     {

@@ -11,8 +11,9 @@
     padding: 1rem;
 }
 .filters .form-label { font-size: .82rem; }
-.filter-actions { display: flex; gap: .35rem; }
+.filter-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
 .filter-actions .btn-link { align-items: center; display: inline-flex; }
+.statement-email-note { color: var(--wf-text-muted, #64748b); font-size: .82rem; margin: -.75rem 0 1rem; }
 .transactions-panel .table-responsive { border-top: 1px solid #f0f2f5; }
 .transactions-panel .pagination-row { margin-top: .25rem; }
 .transaction-actions { min-width: 190px; white-space: nowrap; }

@@ -11,6 +11,7 @@ namespace WalletFlow.Infrastructure.Persistence
         }
 
         public DbSet<Transacao> Transacoes { get; set; }
+        public DbSet<MonthlyReportDelivery> MonthlyReportDeliveries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -22,6 +23,15 @@ namespace WalletFlow.Infrastructure.Persistence
                 .WithMany()
                 .HasForeignKey(transacao => transacao.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<MonthlyReportDelivery>()
+                .HasIndex(delivery => new { delivery.UserId, delivery.Year, delivery.Month })
+                .IsUnique();
+            builder.Entity<MonthlyReportDelivery>()
+                .HasOne<WalletUser>()
+                .WithMany()
+                .HasForeignKey(delivery => delivery.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

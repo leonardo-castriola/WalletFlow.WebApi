@@ -19,11 +19,13 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Importação conciliada de extratos OFX e CSV: prévia antes de gravar, validação de linhas, identificação de duplicatas no histórico e no arquivo e confirmação dos lançamentos selecionados.
 - Extrato paginado, com limite de 100 itens por página.
 - Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
+- Envio do extrato filtrado por período ao endereço de e-mail da própria conta, incluindo todos os lançamentos do filtro e seus totais.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
 - Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
 - Tooltips individuais nos pontos dos gráficos para consultar os valores de cada série e mês; valores e percentuais das receitas e despesas também ficam disponíveis junto às visualizações.
 - Controles para mover os gráficos para cima ou para baixo no painel, com a ordem escolhida salva no navegador.
 - Migrações do Entity Framework Core aplicadas durante a inicialização.
+- Relatório financeiro mensal por e-mail, enviado em segundo plano no horário configurado, com controle persistido para evitar reenvios do mesmo período.
 - Middleware global que registra exceções no servidor e responde com um erro seguro.
 - Autenticação por chave de API fora do ambiente de desenvolvimento.
 - Documentação interativa pelo Swagger em desenvolvimento.
@@ -138,7 +140,7 @@ As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimen
 
 O host Blazor deriva o ID do usuário da sessão autenticada e envia esse ID à API em uma chamada servidor-a-servidor. A API valida a conta e restringe consulta, criação, edição, exclusão, listagem e saldo ao proprietário da transação. Em produção, mantenha a chave de serviço em `Authentication__ApiKey` nos dois processos; ela nunca é enviada pelo navegador. O Blazor e a API devem usar HTTPS.
 
-Para recuperação de senha, configure SMTP no host Blazor. Tokens de redefinição expiram após uma hora. Configure estes valores por variáveis de ambiente ou por um gerenciador de segredos; não grave credenciais no repositório:
+O host Blazor usa SMTP para recuperação de senha e para enviar o extrato filtrado à própria conta. A API também usa SMTP para os relatórios mensais. Em desenvolvimento, os dois projetos compartilham o mesmo `UserSecretsId`; host, porta, usuário e remetente ficam em `appsettings.Development.json`, e a senha deve ficar nos User Secrets. Tokens de redefinição expiram após uma hora. Em produção, configure estes valores por variáveis de ambiente ou por um gerenciador de segredos; não grave credenciais no repositório:
 
 ```text
 Identity__PublicBaseUrl=https://wallet.exemplo.com
@@ -152,7 +154,13 @@ ConnectionStrings__DefaultConnection=Data Source=/caminho/compartilhado/Wallet.d
 Authentication__ApiKey=<mesma chave forte no host Blazor e na API>
 ```
 
-Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. Configure host, porta, remetente, usuário e senha SMTP nos User Secrets do projeto `WalletFlow.Blazor` para testar a recuperação de senha. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
+Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. A senha SMTP local deve ser configurada nos User Secrets do host Blazor para testar a recuperação de senha, o envio do extrato e os relatórios. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
+
+Configure a senha SMTP localmente sem colocá-la nos arquivos versionados:
+
+```powershell
+dotnet user-secrets set "Email:Smtp:Password" "<senha-de-aplicativo>" --project WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj
+```
 
 Exemplo no PowerShell:
 
@@ -242,6 +250,18 @@ Os testes xUnit cobrem regras unitárias, comportamento da API e integração po
 ```bash
 dotnet test WalletFlow.WebApi.slnx
 ```
+
+## Relatórios mensais por e-mail
+
+A API pode enviar, no primeiro dia de cada mês às 08:00 (horário de São Paulo), um resumo das receitas, despesas, saldo e quantidade de movimentações do mês anterior. O agendador verifica pendências a cada hora, envia apenas para contas com e-mail confirmado e registra cada envio para não repetir o mesmo relatório. A tabela de controle é criada pela migração do Entity Framework durante a inicialização.
+
+O recurso fica desativado por padrão. Para habilitá-lo no ambiente de desenvolvimento, configure a opção no User Secrets da API:
+
+```bash
+dotnet user-secrets set "Reports:Monthly:Enabled" "true" --project WalletFlow/WalletFlow.csproj
+```
+
+A API e o host Blazor compartilham o mesmo `UserSecretsId` local, então as credenciais SMTP já configuradas para o Blazor também ficam disponíveis para a API. Em produção, configure `Reports__Monthly__Enabled=true` e as variáveis `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__Username`, `Email__Smtp__Password` e `Email__Smtp__From` no ambiente do servidor.
 
 ## Como contribuir
 

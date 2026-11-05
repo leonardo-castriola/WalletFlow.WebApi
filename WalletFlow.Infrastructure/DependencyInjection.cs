@@ -6,6 +6,8 @@ using Microsoft.Extensions.Hosting;
 using WalletFlow.Application.Abstractions;
 using WalletFlow.Infrastructure.Persistence;
 using WalletFlow.Infrastructure.Repositories;
+using WalletFlow.Infrastructure.Email;
+using WalletFlow.Infrastructure.Reports;
 
 namespace WalletFlow.Infrastructure;
 
@@ -30,6 +32,8 @@ public static class DependencyInjection
             sqliteConnection.DataSource = Path.GetFullPath(Path.Combine(environment.ContentRootPath, sqliteConnection.DataSource));
 
         services.AddDbContext<WalletDbContext>(options => options.UseSqlite(sqliteConnection.ConnectionString));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IMonthlyFinancialReportDispatcher, MonthlyFinancialReportDispatcher>();
         services.AddScoped<ITransacaoRepository, EfTransacaoRepository>();
         services.AddScoped<IUsuarioConsulta, IdentityUsuarioConsulta>();
         services.AddScoped<IFinanceiroService, FinanceiroService>();
