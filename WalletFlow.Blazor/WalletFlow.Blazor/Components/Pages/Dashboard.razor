@@ -1,6 +1,7 @@
 @page "/painel"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @using WalletFlow.Blazor.DTOs
 @using WalletFlow.Blazor.Services
 @using Microsoft.AspNetCore.Components.Authorization
@@ -8,6 +9,7 @@
 @inject TransacaoApiClient Api
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
 
 <PageTitle>Painel financeiro | WalletFlow</PageTitle>
 
@@ -41,11 +43,99 @@
     </section>
 </div>
 
+<p class="chart-order-help">Use as setas em cada gráfico para personalizar a ordem de apresentação.</p>
 <div class="charts-grid">
-    <section class="panel chart-card">
+<section class="panel chart-card" style="@OrdemCss("flow")">
+        <div class="chart-heading">
+            <div><p class="eyebrow">FLUXO DE CAIXA</p><h2>Receitas, despesas e saldo</h2></div>
+            <div class="chart-heading-actions"><span class="chart-period">Últimos 6 meses</span>@ControlesOrdem("flow")</div>
+        </div>
+        @if (_carregando)
+        {
+            <p class="empty-state" role="status">Carregando gráfico...</p>
+        }
+        else if (_evolucao is null || _totalTransacoes == 0)
+        {
+            <p class="empty-state">Cadastre transações para visualizar os gráficos.</p>
+        }
+        else
+        {
+            <div class="chart-legend">
+                <span><i class="legend-dot income-dot"></i>Receitas</span>
+                <span><i class="legend-dot expense-dot"></i>Despesas</span>
+                <span><i class="legend-dot balance-dot"></i>Saldo acumulado</span>
+            </div>
+            <div class="chart-scroll">
+                <svg class="finance-chart" viewBox="0 0 720 280" role="img" aria-label="Evolução mensal das receitas, despesas e saldo acumulado">
+                    @foreach (var linha in Enumerable.Range(0, 5))
+                    {
+                        var valor = ValorNoNivelFluxo(linha);
+                        var y = YFluxo(valor);
+                        <line class="chart-grid-line" x1="82" y1="@SvgNumero(y)" x2="690" y2="@SvgNumero(y)" />
+                        @((MarkupString)$"<text class=\"chart-axis-label\" x=\"76\" y=\"{SvgNumero(y + 4)}\" text-anchor=\"end\">{valor.ToString("C0", Cultura)}</text>")
+                    }
+                    <line class="chart-zero-line" x1="82" y1="@SvgNumero(YFluxo(0m))" x2="690" y2="@SvgNumero(YFluxo(0m))" />
+                    <polyline class="chart-line income-line" points="@PontosFluxo(p => p.Receitas)" />
+                    <polyline class="chart-line expense-line" points="@PontosFluxo(p => p.Despesas)" />
+                    <polyline class="chart-line balance-line" points="@PontosSaldoComparativo()" />
+                    @for (var indice = 0; indice < _evolucao.Meses.Count; indice++)
+                    {
+                        var ponto = _evolucao.Meses[indice];
+                        var x = 92 + indice * 118;
+                        <g>
+                            <circle class="chart-point income-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Receitas))" r="5">
+                                <title>@($"{NomeMes(ponto.Mes)} · Receita: {ponto.Receitas.ToString("C", Cultura)}")</title>
+                            </circle>
+                            <circle class="chart-point expense-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Despesas))" r="5">
+                                <title>@($"{NomeMes(ponto.Mes)} · Despesa: {ponto.Despesas.ToString("C", Cultura)}")</title>
+                            </circle>
+                            <circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Saldo))" r="5">
+                                <title>@($"{NomeMes(ponto.Mes)} · Saldo acumulado: {ponto.Saldo.ToString("C", Cultura)}")</title>
+                            </circle>
+                            <text class="chart-month-label" x="@x" y="252" text-anchor="middle">@NomeMes(ponto.Mes)</text>
+                        </g>
+                    }
+                </svg>
+            </div>
+            <p class="chart-note">As três séries usam a mesma escala em reais. O saldo considera o histórico completo da conta.</p>
+        }
+    </section>
+
+<section class="panel chart-card revenue-pie-card" style="@OrdemCss("revenue")">
+        <div class="chart-heading">
+            <div><p class="eyebrow">RECEITAS</p><h2>Participação por mês</h2></div>
+            <div class="chart-heading-actions"><span class="chart-period">Últimos 6 meses</span>@ControlesOrdem("revenue")</div>
+        </div>
+        @if (_carregando)
+        {
+            <p class="empty-state" role="status">Carregando gráfico...</p>
+        }
+        else if (_evolucao is null || TotalReceitasPeriodo <= 0)
+        {
+            <p class="empty-state">Não há receitas nos últimos seis meses para exibir.</p>
+        }
+        else
+        {
+            <div class="revenue-pie-layout">
+                <div class="revenue-pie" style="background: @FatiaReceitasStyle" role="img" aria-label="Gráfico de pizza com a participação das receitas de cada mês nos últimos seis meses"></div>
+                <ul class="revenue-pie-legend" aria-label="Receitas por mês">
+                    @for (var indice = 0; indice < _evolucao.Meses.Count; indice++)
+                    {
+                        var ponto = _evolucao.Meses[indice];
+                        <li>
+                            <span class="pie-legend-name"><i class="pie-swatch" style="background: @CorFatia(indice)"></i>@NomeMes(ponto.Mes)</span>
+                            <span class="pie-legend-value">@ponto.Receitas.ToString("C0", Cultura) <small>(@PercentualReceita(ponto.Receitas).ToString("0.#", Cultura)%)</small></span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </section>
+
+<section class="panel chart-card" style="@OrdemCss("expenses")">
         <div class="chart-heading">
             <div><p class="eyebrow">DESPESAS</p><h2>Despesas por período</h2></div>
-            <span class="chart-period">Últimos 6 meses</span>
+            <div class="chart-heading-actions"><span class="chart-period">Últimos 6 meses</span>@ControlesOrdem("expenses")</div>
         </div>
         @if (_carregando)
         {
@@ -73,13 +163,14 @@
                     }
                 </div>
             </div>
+            <p class="chart-note">Os valores aparecem acima das barras; a altura é proporcional à maior despesa do período.</p>
         }
     </section>
 
-    <section class="panel chart-card">
+<section class="panel chart-card balance-area-card" style="@OrdemCss("balance")">
         <div class="chart-heading">
-            <div><p class="eyebrow">FLUXO DE CAIXA</p><h2>Receitas, despesas e saldo</h2></div>
-            <span class="chart-period">Últimos 6 meses</span>
+            <div><p class="eyebrow">SALDO</p><h2>Evolução do saldo</h2></div>
+            <div class="chart-heading-actions"><span class="chart-period">Últimos 6 meses</span>@ControlesOrdem("balance")</div>
         </div>
         @if (_carregando)
         {
@@ -87,71 +178,39 @@
         }
         else if (_evolucao is null || _totalTransacoes == 0)
         {
-            <p class="empty-state">Cadastre transações para visualizar os gráficos.</p>
+            <p class="empty-state">Cadastre transações para visualizar a evolução do saldo.</p>
         }
         else
         {
-            <div class="chart-legend">
-                <span><i class="legend-dot income-dot"></i>Receitas</span>
-                <span><i class="legend-dot expense-dot"></i>Despesas</span>
-                <span><i class="legend-dot balance-dot"></i>Saldo acumulado</span>
-            </div>
+            <div class="chart-legend"><span><i class="legend-dot balance-dot"></i>Saldo acumulado</span></div>
             <div class="chart-scroll">
-                <svg class="finance-chart" viewBox="0 0 720 280" role="img" aria-label="Evolução mensal das receitas, despesas e saldo acumulado">
+                <svg class="finance-chart" viewBox="0 0 720 280" role="img" aria-label="Gráfico de área da evolução mensal do saldo acumulado">
                     @foreach (var linha in Enumerable.Range(0, 5))
                     {
-                        var y = 28 + linha * 49;
-                        <line class="chart-grid-line" x1="48" y1="@y" x2="690" y2="@y" />
+                        var y = YSaldo(SaldoNoNivel(linha));
+                        <line class="chart-grid-line" x1="82" y1="@SvgNumero(y)" x2="690" y2="@SvgNumero(y)" />
                     }
-                    <polyline class="chart-line income-line" points="@PontosFluxo(p => p.Receitas)" />
-                    <polyline class="chart-line expense-line" points="@PontosFluxo(p => p.Despesas)" />
-                    <polyline class="chart-line balance-line" points="@PontosSaldo()" />
+                    @for (var nivel = 0; nivel < 5; nivel++)
+                    {
+                        var y = YSaldo(SaldoNoNivel(nivel));
+                        @((MarkupString)$"<text class=\"chart-axis-label\" x=\"76\" y=\"{SvgNumero(y + 4)}\" text-anchor=\"end\">{SaldoNoNivel(nivel).ToString("C0", Cultura)}</text>")
+                    }
+                    <polygon class="balance-area" points="@PontosAreaSaldo()" />
+                    <line class="chart-zero-line" x1="82" y1="@SvgNumero(YSaldo(0m))" x2="690" y2="@SvgNumero(YSaldo(0m))" />
+                    <polyline class="chart-line balance-area-line" points="@PontosSaldo()" />
                     @for (var indice = 0; indice < _evolucao.Meses.Count; indice++)
                     {
                         var ponto = _evolucao.Meses[indice];
-                        var x = 64 + indice * 124;
+                        var x = 92 + indice * 118;
                         <g>
-                            <title>@($"{NomeMes(ponto.Mes)}: receitas {ponto.Receitas.ToString("C", Cultura)}, despesas {ponto.Despesas.ToString("C", Cultura)}, saldo {ponto.Saldo.ToString("C", Cultura)}")</title>
-                            <circle class="chart-point income-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Receitas))" r="4" />
-                            <circle class="chart-point expense-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Despesas))" r="4" />
-                            <circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(YSaldo(ponto.Saldo))" r="4" />
+                            <title>@($"{NomeMes(ponto.Mes)}: saldo {ponto.Saldo.ToString("C", Cultura)}")</title>
+                            <circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(YSaldo(ponto.Saldo))" r="5" />
                             <text class="chart-month-label" x="@x" y="252" text-anchor="middle">@NomeMes(ponto.Mes)</text>
                         </g>
                     }
                 </svg>
             </div>
-            <p class="chart-note">O saldo considera o histórico completo da sua conta. Receitas, despesas e saldo são normalizados separadamente para facilitar a comparação das tendências.</p>
-        }
-    </section>
-
-    <section class="panel chart-card revenue-pie-card">
-        <div class="chart-heading">
-            <div><p class="eyebrow">RECEITAS</p><h2>Participação por mês</h2></div>
-            <span class="chart-period">Últimos 6 meses</span>
-        </div>
-        @if (_carregando)
-        {
-            <p class="empty-state" role="status">Carregando gráfico...</p>
-        }
-        else if (_evolucao is null || TotalReceitasPeriodo <= 0)
-        {
-            <p class="empty-state">Não há receitas nos últimos seis meses para exibir.</p>
-        }
-        else
-        {
-            <div class="revenue-pie-layout">
-                <div class="revenue-pie" style="background: @FatiaReceitasStyle" role="img" aria-label="Gráfico de pizza com a participação das receitas de cada mês nos últimos seis meses"></div>
-                <ul class="revenue-pie-legend" aria-label="Receitas por mês">
-                    @for (var indice = 0; indice < _evolucao.Meses.Count; indice++)
-                    {
-                        var ponto = _evolucao.Meses[indice];
-                        <li>
-                            <span class="pie-legend-name"><i class="pie-swatch" style="background: @CorFatia(indice)"></i>@NomeMes(ponto.Mes)</span>
-                            <span class="pie-legend-value">@ponto.Receitas.ToString("C0", Cultura) <small>(@PercentualReceita(ponto.Receitas).ToString("0.#", Cultura)%)</small></span>
-                        </li>
-                    }
-                </ul>
-            </div>
+            <p class="chart-note">Valores em reais. O saldo mensal considera o histórico completo da conta; passe sobre um ponto para ver o valor exato.</p>
         }
     </section>
 </div>
@@ -213,6 +272,9 @@
     private bool _carregando = true;
     private string? _erro;
     private string? _usuarioId;
+    private IJSObjectReference? _dashboardModule;
+    private List<string> _ordemGraficos = ["flow", "revenue", "expenses", "balance"];
+    private static readonly string[] GraficosValidos = ["flow", "revenue", "expenses", "balance"];
 
     protected override async Task OnInitializedAsync()
     {
@@ -228,6 +290,56 @@
         // O cliente de API envia este NameIdentifier pelo canal servidor-a-servidor;
         // a API valida a conta e usa o claim para filtrar todas as consultas.
         await CarregarAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _dashboardModule = await JS.InvokeAsync<IJSObjectReference>("import", "./dashboard.js");
+            var salva = await _dashboardModule.InvokeAsync<string[]>("loadChartOrder");
+            if (salva.Length == GraficosValidos.Length && salva.Distinct().Count() == GraficosValidos.Length && salva.All(GraficosValidos.Contains))
+                _ordemGraficos = salva.ToList();
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+            // Se o armazenamento do navegador não estiver disponível, usa a ordem padrão.
+        }
+    }
+
+    private string OrdemCss(string grafico) => $"order: {_ordemGraficos.IndexOf(grafico)};";
+
+    private RenderFragment ControlesOrdem(string grafico) => @<div class="chart-order-controls" role="group" aria-label="Reordenar gráfico">
+        <button type="button" class="chart-order-button" @onclick="() => MoverGraficoAsync(grafico, -1)" disabled="@(_ordemGraficos.IndexOf(grafico) == 0)" aria-label="Mover @NomeGrafico(grafico) para cima" title="Mover para cima">↑</button>
+        <button type="button" class="chart-order-button" @onclick="() => MoverGraficoAsync(grafico, 1)" disabled="@(_ordemGraficos.IndexOf(grafico) == _ordemGraficos.Count - 1)" aria-label="Mover @NomeGrafico(grafico) para baixo" title="Mover para baixo">↓</button>
+    </div>;
+
+    private static string NomeGrafico(string grafico) => grafico switch
+    {
+        "flow" => "Receitas, despesas e saldo",
+        "revenue" => "Receitas",
+        "expenses" => "Despesas",
+        "balance" => "Saldo",
+        _ => "gráfico"
+    };
+
+    private async Task MoverGraficoAsync(string grafico, int deslocamento)
+    {
+        var indice = _ordemGraficos.IndexOf(grafico);
+        var novoIndice = indice + deslocamento;
+        if (indice < 0 || novoIndice < 0 || novoIndice >= _ordemGraficos.Count) return;
+        (_ordemGraficos[indice], _ordemGraficos[novoIndice]) = (_ordemGraficos[novoIndice], _ordemGraficos[indice]);
+        if (_dashboardModule is not null)
+            await _dashboardModule.InvokeVoidAsync("saveChartOrder", _ordemGraficos);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_dashboardModule is null) return;
+        try { await _dashboardModule.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
     }
 
     private async Task CarregarAsync()
@@ -258,7 +370,8 @@
         }
     }
 
-    private decimal MaximoFluxo => _evolucao?.Meses.Select(ponto => Math.Max(ponto.Receitas, ponto.Despesas)).DefaultIfEmpty(0m).Max() ?? 0m;
+    private decimal MinimoFluxo => Math.Min(0m, _evolucao?.Meses.SelectMany(ponto => new[] { ponto.Receitas, ponto.Despesas, ponto.Saldo }).DefaultIfEmpty(0m).Min() ?? 0m);
+    private decimal MaximoFluxo => Math.Max(0m, _evolucao?.Meses.SelectMany(ponto => new[] { ponto.Receitas, ponto.Despesas, ponto.Saldo }).DefaultIfEmpty(0m).Max() ?? 0m);
     private decimal MaximoDespesa => _evolucao?.Meses.Select(ponto => ponto.Despesas).DefaultIfEmpty(0m).Max() ?? 0m;
     private decimal TotalReceitasPeriodo => _evolucao?.Meses.Sum(ponto => ponto.Receitas) ?? 0m;
     private double PercentualReceita(decimal valor) => TotalReceitasPeriodo <= 0 ? 0 : (double)(valor / TotalReceitasPeriodo) * 100d;
@@ -280,19 +393,42 @@
         }
     }
     private double AlturaDespesaPercentual(decimal valor) => MaximoDespesa <= 0 ? 0 : (double)(valor / MaximoDespesa) * 100d;
-    private double YFluxo(decimal valor) => MaximoFluxo <= 0 ? 224 : 224 - (double)(valor / MaximoFluxo) * 180;
+    private double YFluxo(decimal valor)
+    {
+        var intervalo = MaximoFluxo - MinimoFluxo;
+        return intervalo == 0 ? 134 : 224 - (double)((valor - MinimoFluxo) / intervalo) * 180;
+    }
+    private decimal ValorNoNivelFluxo(int nivel) => MaximoFluxo - (MaximoFluxo - MinimoFluxo) * nivel / 4m;
     private double YSaldo(decimal valor)
     {
         var saldos = _evolucao?.Meses.Select(ponto => ponto.Saldo).ToArray() ?? [];
         if (saldos.Length == 0) return 126;
-        var minimo = saldos.Min();
-        var intervalo = saldos.Max() - minimo;
+        var minimo = Math.Min(0m, saldos.Min());
+        var maximo = Math.Max(0m, saldos.Max());
+        var intervalo = maximo - minimo;
         return intervalo == 0 ? 126 : 224 - (double)((valor - minimo) / intervalo) * 180;
     }
+    private decimal SaldoNoNivel(int nivel)
+    {
+        var saldos = _evolucao?.Meses.Select(ponto => ponto.Saldo).ToArray() ?? [];
+        if (saldos.Length == 0) return 0m;
+        var minimo = Math.Min(0m, saldos.Min());
+        var maximo = Math.Max(0m, saldos.Max());
+        return maximo - (maximo - minimo) * nivel / 4m;
+    }
     private string PontosFluxo(Func<PontoEvolucaoFinanceiraDto, decimal> seletor) =>
-        string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{64 + indice * 124},{YFluxo(seletor(ponto)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}"));
+        string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{YFluxo(seletor(ponto)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}"));
+    private string PontosSaldoComparativo() =>
+        string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{SvgNumero(YFluxo(ponto.Saldo))}"));
     private string PontosSaldo() =>
-        string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{64 + indice * 124},{YSaldo(ponto.Saldo).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}"));
+        string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{YSaldo(ponto.Saldo).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}"));
+    private string PontosAreaSaldo()
+    {
+        var pontos = _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{SvgNumero(YSaldo(ponto.Saldo))}").ToList();
+        if (pontos.Count == 0) return string.Empty;
+        var linhaZero = SvgNumero(YSaldo(0m));
+        return $"92,{linhaZero} {string.Join(" ", pontos)} {92 + (pontos.Count - 1) * 118},{linhaZero}";
+    }
     private static string SvgNumero(double valor) => valor.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static string NomeMes(DateOnly mes) => mes.ToString("MMM", Cultura).TrimEnd('.');
 }

@@ -20,8 +20,9 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Extrato paginado, com limite de 100 itens por página.
 - Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
-- Gráficos no painel com despesas mensais e evolução de receitas, despesas e saldo acumulado nos últimos seis meses.
-- Gráfico de pizza com a participação de cada mês no total de receitas dos últimos seis meses, acompanhado de valores e percentuais.
+- Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
+- Tooltips individuais nos pontos dos gráficos para consultar os valores de cada série e mês; valores e percentuais das receitas e despesas também ficam disponíveis junto às visualizações.
+- Controles para mover os gráficos para cima ou para baixo no painel, com a ordem escolhida salva no navegador.
 - Migrações do Entity Framework Core aplicadas durante a inicialização.
 - Middleware global que registra exceções no servidor e responde com um erro seguro.
 - Autenticação por chave de API fora do ambiente de desenvolvimento.
@@ -187,7 +188,7 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | Recuperar senha | `/esqueci-a-senha` | Solicitar link de redefinição por e-mail |
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
-| Painel financeiro | `/painel` | Consultar saldo, movimentações recentes e gráficos financeiros dos últimos seis meses |
+| Painel financeiro | `/painel` | Consultar saldo e movimentações recentes, visualizar gráficos dos últimos seis meses e personalizar sua ordem de apresentação |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
 | Editar transação | `/transacoes/editar/{id}` | Atualizar descrição, valor e tipo de uma transação própria |

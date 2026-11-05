@@ -35,7 +35,7 @@ public sealed class WalletFlowBrowserFixture : IAsyncLifetime
 
         var repositoryRoot = FindRepositoryRoot();
         var appProjectDirectory = Path.Combine(repositoryRoot, "WalletFlow.Blazor", "WalletFlow.Blazor");
-        const string configuration = "BrowserTests";
+        const string configuration = "Debug";
         var appAssembly = Path.Combine(appProjectDirectory, "bin", configuration, "net10.0", "WalletFlow.Blazor.dll");
         if (!File.Exists(appAssembly))
             throw new FileNotFoundException("A aplicação Blazor não foi compilada para os testes de navegador.", appAssembly);

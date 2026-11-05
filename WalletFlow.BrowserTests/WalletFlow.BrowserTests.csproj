@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\WalletFlow.Blazor\WalletFlow.Blazor\WalletFlow.Blazor.csproj"
                       ReferenceOutputAssembly="false"
-                      AdditionalProperties="Configuration=BrowserTests;UseAppHost=false" />
+                      Private="false"
+                      AdditionalProperties="Configuration=Debug;UseAppHost=false" />
   </ItemGroup>
 </Project>
