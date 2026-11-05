@@ -364,3 +364,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Local .NET CLI state created for isolated builds
+.codex-dotnet-home/
