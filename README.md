@@ -19,11 +19,14 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Importação conciliada de extratos OFX e CSV: prévia antes de gravar, validação de linhas, identificação de duplicatas no histórico e no arquivo e confirmação dos lançamentos selecionados.
 - Extrato paginado, com limite de 100 itens por página.
 - Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
-- Envio do extrato filtrado por período ao endereço de e-mail da própria conta, incluindo todos os lançamentos do filtro e seus totais.
+- Envio do extrato filtrado por período ao endereço de e-mail da própria conta, como PDF anexado com todos os lançamentos e seus totais.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
 - Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
+- Orçamento total de despesas configurável por usuário e por mês, com acompanhamento do valor gasto e percentual utilizado.
+- Alerta em tempo real via SignalR quando as despesas mensais atingem 80% do limite; o envio fica registrado para evitar avisos repetidos no mesmo mês.
 - Tooltips individuais nos pontos dos gráficos para consultar os valores de cada série e mês; valores e percentuais das receitas e despesas também ficam disponíveis junto às visualizações.
 - Controles para mover os gráficos para cima ou para baixo no painel, com a ordem escolhida salva no navegador.
+- Tema claro e escuro selecionável, com preferência persistente e sincronizada entre as páginas, inclusive antes e depois do login.
 - Migrações do Entity Framework Core aplicadas durante a inicialização.
 - Relatório financeiro mensal por e-mail, enviado em segundo plano no horário configurado, com controle persistido para evitar reenvios do mesmo período.
 - Middleware global que registra exceções no servidor e responde com um erro seguro.
@@ -42,6 +45,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Blazor Web App com componentes interativos no servidor
 - Entity Framework Core 10
 - SQLite
+- QuestPDF 2026.5.0 para gerar o PDF do extrato (licença Community sujeita aos critérios de elegibilidade do [QuestPDF](https://www.questpdf.com/license/community.html)).
 - Swagger / Swashbuckle
 - xUnit
 
@@ -186,6 +190,9 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | `DELETE` | `/api/Transacao/{id}` | Exclui uma transação própria |
 | `GET` | `/api/Transacao/saldo` | Retorna o saldo do próprio usuário |
 | `GET` | `/api/Transacao/evolucao-mensal?ano=2026&mes=11` | Retorna os totais mensais dos últimos seis meses para os gráficos do painel |
+| `GET` | `/api/Orcamento?ano=2026&mes=11` | Consulta limite, despesas e percentual utilizado no mês |
+| `PUT` | `/api/Orcamento?ano=2026&mes=11` | Cria ou atualiza o limite mensal de despesas |
+| `POST` | `/api/Orcamento/verificar-alerta?ano=2026&mes=11` | Registra e retorna o alerta de 80% apenas uma vez por mês |
 | `POST` | `/api/Transacao/importacao/previa` | Analisa arquivo OFX/CSV (multipart, campo `arquivo`) e retorna prévia e duplicatas |
 | `POST` | `/api/Transacao/importacao` | Grava os lançamentos selecionados após revisão, ignorando duplicatas revalidadas |
 
@@ -199,12 +206,15 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
 | Painel financeiro | `/painel` | Consultar saldo e movimentações recentes, visualizar gráficos dos últimos seis meses e personalizar sua ordem de apresentação |
+| Orçamento mensal | `/orcamento` | Definir limite de despesas para cada mês e acompanhar o progresso até o alerta de 80% |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
 | Editar transação | `/transacoes/editar/{id}` | Atualizar descrição, valor e tipo de uma transação própria |
 | Importar extrato | `/transacoes/importar` | Analisar, revisar e importar lançamentos de arquivos OFX ou CSV |
 
 Na importação CSV, use cabeçalhos `Data`, `Descrição` e `Valor`; `Tipo` é opcional quando o valor tiver sinal. São reconhecidos separadores por vírgula, ponto e vírgula e tabulação; valores decimais podem usar vírgula ou ponto. Para identificar duplicatas, o sistema compara data, tipo, valor e descrição normalizada. O arquivo pode ter até 5 MB e 500 lançamentos válidos por importação; linhas inválidas aparecem na revisão e não são gravadas. A data do lançamento importado é preservada no extrato.
+
+O orçamento é geral para todas as despesas da conta no mês selecionado. A apuração respeita `Filters:TimeZoneId` (padrão `America/Sao_Paulo`). O alerta em tempo real usa uma conexão SignalR autenticada pelo cookie do Blazor e é emitido ao salvar ou alterar transações pela interface; um único alerta fica registrado para cada usuário e mês.
 
 Ao salvar uma transação válida, a aplicação persiste os dados pela API e exibe a confirmação. Fechar a mensagem limpa o formulário. Cancelar limpa os campos sem enviar um cadastro.
 

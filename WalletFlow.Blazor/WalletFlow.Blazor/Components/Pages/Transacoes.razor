@@ -4,6 +4,7 @@
 @using WalletFlow.Blazor.DTOs
 @using WalletFlow.Blazor.Enums
 @using WalletFlow.Blazor.Services
+@using WalletFlow.Application.Abstractions
 @using WalletFlow.Infrastructure.Persistence
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Authorization
@@ -197,11 +198,18 @@
 
             var tipo = LerTipoFiltro();
             var transacoes = await Api.ObterTodasTransacoesAsync(tipo, inicio, fim);
-            var html = MontarExtratoHtml(transacoes, inicio, fim, tipo);
             var periodo = $"{inicio?.ToString("dd/MM/yyyy", Cultura) ?? "início"} a {fim?.ToString("dd/MM/yyyy", Cultura) ?? "hoje"}";
-            await EmailSender.SendAsync(user.Email, $"Seu extrato WalletFlow — {periodo}", html);
+            var tipoSelecionado = tipo?.ToString() ?? "Todos";
+            var pdf = ExtratoPdfGenerator.Gerar(transacoes, periodo, tipoSelecionado, Api.ConverterParaFusoConfigurado);
+            var html = MontarMensagemExtratoHtml(transacoes, periodo, tipoSelecionado);
+            var nomeArquivo = $"walletflow-extrato-{DateTime.Now:yyyy-MM-dd}.pdf";
+            await EmailSender.SendAsync(
+                user.Email,
+                $"Seu extrato WalletFlow — {periodo}",
+                html,
+                [new EmailAttachment(nomeArquivo, "application/pdf", pdf)]);
 
-            _mensagem = $"Extrato do período enviado para {user.Email}.";
+            _mensagem = $"Extrato do período enviado para {user.Email}, com o PDF anexado.";
         }
         catch (HttpRequestException ex)
         {
@@ -228,38 +236,20 @@
         }
     }
 
-    private string MontarExtratoHtml(
+    private static string MontarMensagemExtratoHtml(
         IReadOnlyList<TransacaoRespostaDto> transacoes,
-        DateOnly? inicio,
-        DateOnly? fim,
-        TipoTransacao? tipo)
+        string periodo,
+        string tipo)
     {
         var receitas = transacoes.Where(item => item.TipoFormatado == "Receita").Sum(item => item.Valor);
         var despesas = transacoes.Where(item => item.TipoFormatado == "Despesa").Sum(item => item.Valor);
-        var periodo = $"{inicio?.ToString("dd/MM/yyyy", Cultura) ?? "Início"} a {fim?.ToString("dd/MM/yyyy", Cultura) ?? "hoje"}";
-        var tipoSelecionado = tipo?.ToString() ?? "Todos";
-        var linhas = string.Join(Environment.NewLine, transacoes.Select(item => $"""
-            <tr>
-              <td style="padding:8px;border-bottom:1px solid #e5e7eb">{System.Net.WebUtility.HtmlEncode(item.Descricao)}</td>
-              <td style="padding:8px;border-bottom:1px solid #e5e7eb">{Api.ConverterParaFusoConfigurado(item.DataCadastro).ToString("dd/MM/yyyy", Cultura)}</td>
-              <td style="padding:8px;border-bottom:1px solid #e5e7eb">{System.Net.WebUtility.HtmlEncode(item.TipoFormatado)}</td>
-              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right">{item.Valor.ToString("C", Cultura)}</td>
-            </tr>
-            """));
-
-        if (string.IsNullOrWhiteSpace(linhas))
-            linhas = "<tr><td colspan=\"4\" style=\"padding:12px;text-align:center\">Nenhuma movimentação encontrada.</td></tr>";
-
         return $"""
-            <div style="font-family:Arial,sans-serif;color:#172b4d;max-width:760px;margin:auto">
-              <h2>Seu extrato WalletFlow</h2>
-              <p>Período: <strong>{periodo}</strong> · Tipo: <strong>{tipoSelecionado}</strong></p>
-              <p>Receitas: <strong>{receitas.ToString("C", Cultura)}</strong> &nbsp; Despesas: <strong>{despesas.ToString("C", Cultura)}</strong> &nbsp; Saldo do período: <strong>{(receitas - despesas).ToString("C", Cultura)}</strong></p>
-              <table style="border-collapse:collapse;width:100%;text-align:left">
-                <thead><tr style="background:#f3f6fb"><th style="padding:8px">Descrição</th><th style="padding:8px">Data</th><th style="padding:8px">Tipo</th><th style="padding:8px;text-align:right">Valor</th></tr></thead>
-                <tbody>{linhas}</tbody>
-              </table>
-              <p style="color:#64748b;font-size:12px">Enviado pelo WalletFlow para o endereço de e-mail da sua conta.</p>
+            <div style="font-family:Arial,sans-serif;color:#172b4d;max-width:600px;margin:auto">
+              <h2>Seu extrato WalletFlow está pronto</h2>
+              <p>Período: <strong>{System.Net.WebUtility.HtmlEncode(periodo)}</strong> · Tipo: <strong>{System.Net.WebUtility.HtmlEncode(tipo)}</strong></p>
+              <p>Receitas: <strong>{receitas.ToString("C", Cultura)}</strong><br />Despesas: <strong>{despesas.ToString("C", Cultura)}</strong><br />Saldo do período: <strong>{(receitas - despesas).ToString("C", Cultura)}</strong></p>
+              <p>O extrato completo, com todos os lançamentos e totais, está anexado em PDF.</p>
+              <p style="color:#64748b;font-size:12px">Mensagem enviada pelo WalletFlow para o e-mail da sua conta.</p>
             </div>
             """;
     }

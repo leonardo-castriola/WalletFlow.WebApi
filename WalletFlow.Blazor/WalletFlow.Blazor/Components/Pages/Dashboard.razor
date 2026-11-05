@@ -19,7 +19,7 @@
         <h1>Bem-vindo ao WalletFlow</h1>
         <p class="text-secondary">Seu dinheiro organizado em um só lugar.</p>
     </div>
-    <button class="btn btn-outline-secondary" @onclick="CarregarAsync" disabled="@_carregando">Atualizar</button>
+    <button class="btn btn-primary" @onclick="CarregarAsync" disabled="@_carregando">Atualizar</button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(_erro))

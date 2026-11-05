@@ -9,7 +9,15 @@ namespace WalletFlow.Infrastructure.Email;
 
 public sealed class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEmailSender> logger) : IEmailSender
 {
-    public async Task SendAsync(string recipient, string subject, string htmlBody, CancellationToken cancellationToken = default)
+    public Task SendAsync(string recipient, string subject, string htmlBody, CancellationToken cancellationToken = default) =>
+        SendAsync(recipient, subject, htmlBody, Array.Empty<EmailAttachment>(), cancellationToken);
+
+    public async Task SendAsync(
+        string recipient,
+        string subject,
+        string htmlBody,
+        IReadOnlyCollection<EmailAttachment> attachments,
+        CancellationToken cancellationToken = default)
     {
         var host = configuration["Email:Smtp:Host"];
         var port = configuration.GetValue<int?>("Email:Smtp:Port");
@@ -32,7 +40,10 @@ public sealed class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEm
         message.From.Add(MailboxAddress.Parse(senderAddress!));
         message.To.Add(MailboxAddress.Parse(recipient));
         message.Subject = subject;
-        message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
+        var body = new BodyBuilder { HtmlBody = htmlBody };
+        foreach (var attachment in attachments)
+            body.Attachments.Add(attachment.FileName, attachment.Content, ContentType.Parse(attachment.ContentType));
+        message.Body = body.ToMessageBody();
 
         using var client = new SmtpClient();
         var socketOptions = implicitTls ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;

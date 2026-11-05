@@ -2,16 +2,23 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Components.Authorization;
+using WalletFlow.Blazor.Components.Layout;
 using WalletFlow.Blazor.DTOs;
 using WalletFlow.Blazor.Enums;
+using AlertaOrcamentoDto = WalletFlow.Application.DTOs.AlertaOrcamentoDto;
+using AtualizarOrcamentoMensalDto = WalletFlow.Application.DTOs.AtualizarOrcamentoMensalDto;
+using OrcamentoMensalDto = WalletFlow.Application.DTOs.OrcamentoMensalDto;
 
 namespace WalletFlow.Blazor.Services;
 
 public sealed class TransacaoApiClient(
     HttpClient httpClient,
     IConfiguration configuration,
-    AuthenticationStateProvider authenticationStateProvider)
+    AuthenticationStateProvider authenticationStateProvider,
+    IHubContext<BudgetAlertsHub> alertHub,
+    ILogger<TransacaoApiClient> logger)
 {
     private readonly TimeZoneInfo _timeZone = TimeZoneInfo.FindSystemTimeZoneById(
         configuration["Filters:TimeZoneId"] ?? "America/Sao_Paulo");
@@ -83,9 +90,11 @@ public sealed class TransacaoApiClient(
         using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
 
-        return await response.Content.ReadFromJsonAsync<TransacaoRespostaDto>(
+        var criada = await response.Content.ReadFromJsonAsync<TransacaoRespostaDto>(
                    cancellationToken: cancellationToken)
                ?? throw new InvalidOperationException("A API não retornou a transação criada.");
+        await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
+        return criada;
     }
 
     public async Task<TransacaoRespostaDto> ObterTransacaoAsync(
@@ -112,6 +121,7 @@ public sealed class TransacaoApiClient(
         request.Content = JsonContent.Create(transacao);
         using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
+        await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
     }
 
     public async Task ExcluirTransacaoAsync(int id, CancellationToken cancellationToken = default)
@@ -120,6 +130,7 @@ public sealed class TransacaoApiClient(
             HttpMethod.Delete, $"api/Transacao/{id.ToString(CultureInfo.InvariantCulture)}", cancellationToken);
         using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
+        await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
     }
 
     public async Task<ExtratoImportacaoPreviaDto> AnalisarExtratoAsync(
@@ -149,9 +160,63 @@ public sealed class TransacaoApiClient(
         request.Content = JsonContent.Create(confirmacao);
         using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoImportacaoAsync(response, cancellationToken);
-        return await response.Content.ReadFromJsonAsync<ExtratoImportacaoResultadoDto>(cancellationToken: cancellationToken)
+        var resultado = await response.Content.ReadFromJsonAsync<ExtratoImportacaoResultadoDto>(cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException("A API não retornou o resultado da importação.");
+        await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
+        return resultado;
     }
+
+    public async Task<OrcamentoMensalDto> ObterOrcamentoMensalAsync(int ano, int mes, CancellationToken cancellationToken = default)
+    {
+        using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Get, $"api/Orcamento?ano={ano}&mes={mes}", cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<OrcamentoMensalDto>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("A API não retornou os dados do orçamento.");
+    }
+
+    public async Task<OrcamentoMensalDto> SalvarOrcamentoMensalAsync(int ano, int mes, decimal limite, CancellationToken cancellationToken = default)
+    {
+        using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Put, $"api/Orcamento?ano={ano}&mes={mes}", cancellationToken);
+        request.Content = JsonContent.Create(new AtualizarOrcamentoMensalDto(limite));
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await GarantirSucessoAsync(response, cancellationToken);
+        var saved = await response.Content.ReadFromJsonAsync<OrcamentoMensalDto>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("A API não retornou o orçamento salvo.");
+        await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
+        return saved;
+    }
+
+    private async Task VerificarEPublicarAlertaAsync(string userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var localDate = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, _timeZone);
+            using var request = await CreateAuthenticatedRequestAsync(
+                HttpMethod.Post,
+                $"api/Orcamento/verificar-alerta?ano={localDate.Year}&mes={localDate.Month}",
+                cancellationToken);
+            using var response = await httpClient.SendAsync(request, cancellationToken);
+            if (response.StatusCode == HttpStatusCode.NoContent)
+                return;
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("A API não conseguiu verificar o limite do orçamento mensal ({StatusCode}).", response.StatusCode);
+                return;
+            }
+
+            var alert = await response.Content.ReadFromJsonAsync<AlertaOrcamentoDto>(cancellationToken: cancellationToken);
+            if (alert is not null)
+                await alertHub.Clients.Group(BudgetAlertsHub.GroupName(userId)).SendAsync("AlertaOrcamento", alert, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Falha ao publicar o alerta de orçamento; a operação financeira foi concluída.");
+        }
+    }
+
+    private static string UserIdDaRequisicao(HttpRequestMessage request) =>
+        request.Headers.GetValues("X-User-ID").Single();
 
     public async Task<decimal> ObterSaldoAsync(CancellationToken cancellationToken = default)
     {

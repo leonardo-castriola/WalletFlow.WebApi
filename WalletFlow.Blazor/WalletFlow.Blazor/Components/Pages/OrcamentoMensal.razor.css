@@ -1,0 +1,33 @@
+.budget-panel { display: grid; gap: 1.4rem; }
+.budget-config-grid { align-items: start; display: grid; gap: clamp(1.5rem, 5vw, 4rem); grid-template-columns: minmax(0, 1fr) minmax(18rem, .7fr); }
+.budget-config-main { min-width: 0; }
+.budget-heading { margin-bottom: 1.5rem; }
+.budget-heading .eyebrow { margin-bottom: .45rem; }
+.budget-heading h2 { margin: 0; text-transform: capitalize; }
+.budget-period { align-self: start; display: grid; gap: .9rem; grid-template-columns: minmax(0, 1fr) minmax(6.5rem, .45fr); }
+.budget-period-field { display: grid; gap: .4rem; min-width: 0; }
+.budget-period label { color: var(--wf-muted); font-size: .82rem; font-weight: 650; }
+.budget-period .form-select, .budget-period .form-control { min-width: 0; width: 100%; }
+.budget-limit-field { flex: 1 1 16rem; max-width: 24rem; }
+.budget-limit-field .form-label { display: block; }
+.budget-form { align-items: end; display: flex; flex-wrap: wrap; gap: .75rem; }
+.budget-form .btn { flex: 0 0 auto; }
+.budget-save-button { margin-top: .65rem; }
+.budget-summary { border-top: 1px solid var(--wf-line); margin-top: .3rem; padding-top: 1.4rem; }
+.budget-summary-values { align-items: baseline; display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+.budget-summary-values span { color: var(--wf-muted); font-size: .9rem; }
+.budget-summary-values strong { color: var(--wf-ink); font-size: 1.25rem; }
+.budget-progress { background: #e8edf4; border-radius: 999px; height: .75rem; overflow: hidden; }
+.budget-progress .progress-bar { background: linear-gradient(90deg, #20a36b, #59c58f); border-radius: inherit; transition: width .3s ease; }
+.budget-progress .budget-progress-warning { background: linear-gradient(90deg, #e8a333, #dc5b50); }
+.budget-usage { color: var(--wf-ink); font-size: .86rem; font-weight: 700; margin: .5rem 0; }
+.budget-threshold-note, .budget-empty-state { color: var(--wf-muted); font-size: .88rem; margin: 0; }
+.budget-threshold-note[role="status"] { color: var(--wf-warning); font-weight: 650; }
+@media (max-width: 600px) {
+    .budget-config-grid { grid-template-columns: minmax(0, 1fr); }
+    .budget-heading { margin-bottom: 1rem; }
+    .budget-period { grid-template-columns: minmax(0, 1fr) minmax(6rem, .45fr); }
+    .budget-form { align-items: stretch; flex-direction: column; }
+    .budget-limit-field { max-width: none; width: 100%; }
+    .budget-form .btn { width: 100%; }
+}

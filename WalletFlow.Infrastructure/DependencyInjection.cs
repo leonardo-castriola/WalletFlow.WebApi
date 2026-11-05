@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IMonthlyFinancialReportDispatcher, MonthlyFinancialReportDispatcher>();
         services.AddScoped<ITransacaoRepository, EfTransacaoRepository>();
+        services.AddScoped<IOrcamentoMensalService, EfOrcamentoMensalService>();
         services.AddScoped<IUsuarioConsulta, IdentityUsuarioConsulta>();
         services.AddScoped<IFinanceiroService, FinanceiroService>();
         return services;

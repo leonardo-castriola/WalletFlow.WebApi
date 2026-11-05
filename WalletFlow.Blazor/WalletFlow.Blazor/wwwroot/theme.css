@@ -174,3 +174,273 @@ h1:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --wf-primary: #8bb4ff;
+    --wf-primary-hover: #a8c7ff;
+    --wf-primary-soft: #243654;
+    --wf-secondary: #a8b3c4;
+    --wf-success: #65d49a;
+    --wf-success-soft: #173a2c;
+    --wf-warning: #f5bd65;
+    --wf-warning-soft: #3b2d19;
+    --wf-danger: #ff8a82;
+    --wf-ink: #e8edf5;
+    --wf-muted: #a8b3c4;
+    --wf-line: #344155;
+    --wf-surface: #1b2637;
+    --wf-canvas: #111a28;
+    --wf-shadow-card: 0 8px 24px rgb(0 0 0 / 18%);
+    --bs-body-color: #e8edf5;
+    --bs-body-bg: #111a28;
+    --bs-border-color: #344155;
+    --bs-secondary-color: #a8b3c4;
+    --bs-tertiary-bg: #202c3e;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] .page,
+html[data-theme="dark"] .main-column,
+html[data-theme="dark"] article.content {
+    background-color: var(--wf-canvas);
+    color: var(--wf-ink);
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html[data-theme="dark"] .form-label,
+html[data-theme="dark"] .transaction-description,
+html[data-theme="dark"] .transaction-value {
+    color: var(--wf-ink);
+}
+
+html[data-theme="dark"] a { color: var(--wf-primary); }
+html[data-theme="dark"] a:hover { color: var(--wf-primary-hover); }
+
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .identity-card,
+html[data-theme="dark"] .login-card,
+html[data-theme="dark"] .logout-card,
+html[data-theme="dark"] .chart-order-button {
+    background-color: var(--wf-surface);
+    border-color: var(--wf-line);
+    color: var(--wf-ink);
+}
+
+html[data-theme="dark"] .top-row:not(.navbar) {
+    background: rgb(27 38 55 / 94%);
+    border-bottom-color: var(--wf-line);
+    color: var(--wf-muted);
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .identity-input,
+html[data-theme="dark"] .login-input {
+    background-color: #141f2e;
+    border-color: #46556c;
+    color: var(--wf-ink);
+}
+
+html[data-theme="dark"] .form-control::placeholder { color: #8795a9; }
+html[data-theme="dark"] .form-control:focus,
+html[data-theme="dark"] .form-select:focus,
+html[data-theme="dark"] .identity-input:focus,
+html[data-theme="dark"] .login-input:focus { background-color: #141f2e; color: var(--wf-ink); }
+
+html[data-theme="dark"] .table,
+html[data-theme="dark"] .table > :not(caption) > * > * {
+    --bs-table-color: var(--wf-ink);
+    --bs-table-bg: transparent;
+    color: var(--wf-ink);
+    border-color: var(--wf-line);
+}
+
+html[data-theme="dark"] .transaction-table tbody td,
+html[data-theme="dark"] .pagination-row,
+html[data-theme="dark"] .transactions-panel .table-responsive,
+html[data-theme="dark"] .identity-footer,
+html[data-theme="dark"] .identity-security-note {
+    border-color: var(--wf-line);
+}
+
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .filters,
+html[data-theme="dark"] .import-dropzone,
+html[data-theme="dark"] .chart-order-button:hover:not(:disabled) {
+    background-color: #202c3e;
+    border-color: #46556c;
+    color: var(--wf-ink);
+}
+
+html[data-theme="dark"] .import-file-icon { background: #263b5b; color: #a8c7ff; }
+html[data-theme="dark"] .file-format-badge { background: #243654; color: #b9d2ff; }
+html[data-theme="dark"] .import-summary > span,
+html[data-theme="dark"] .reconciliation-status { background: #263246; color: #c0cad8; }
+html[data-theme="dark"] .import-duplicate-row { background: #202c3e; color: #b3bece; }
+html[data-theme="dark"] .import-dropzone:hover,
+html[data-theme="dark"] .import-dropzone:focus-within { background: #202c3e; border-color: #8bb4ff; }
+html[data-theme="dark"] .import-summary .duplicate-summary,
+html[data-theme="dark"] .reconciliation-status.existing,
+html[data-theme="dark"] .reconciliation-status.repeated { background: #3b2d19; color: #f5bd65; }
+html[data-theme="dark"] .reconciliation-status.new-entry { background: #173a2c; color: #65d49a; }
+html[data-theme="dark"] .import-row-errors { background: #3b2d19; border-color: #80602d; color: #ffe0a1; }
+html[data-theme="dark"] .identity-intro,
+html[data-theme="dark"] .chart-period,
+html[data-theme="dark"] .chart-legend,
+html[data-theme="dark"] .chart-order-help,
+html[data-theme="dark"] .chart-note,
+html[data-theme="dark"] .pie-legend-name,
+html[data-theme="dark"] .expense-month,
+html[data-theme="dark"] .expense-amount,
+html[data-theme="dark"] .pie-legend-value small { color: var(--wf-muted); }
+html[data-theme="dark"] .expense-chart { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 43px, #45536a 44px, transparent 45px); }
+html[data-theme="dark"] .budget-progress { background-color: #344155; }
+
+html[data-theme="dark"] .btn-primary {
+    --bs-btn-bg: #2563eb;
+    --bs-btn-border-color: #2563eb;
+    --bs-btn-hover-bg: #1d4ed8;
+    --bs-btn-hover-border-color: #1d4ed8;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-color: #fff;
+}
+
+/* Os rótulos SVG criados via MarkupString não recebem o atributo de CSS isolado do componente. */
+html[data-theme="dark"] .finance-chart .chart-axis-label,
+html[data-theme="dark"] .finance-chart .chart-month-label { fill: #b8c5d8; }
+html[data-theme="dark"] .finance-chart .chart-grid-line { stroke: #45536a; }
+html[data-theme="dark"] .finance-chart .chart-zero-line { stroke: #74839a; }
+
+html[data-theme="dark"] .revenue-pie-legend,
+html[data-theme="dark"] .pie-legend-value { color: var(--wf-ink); }
+html[data-theme="dark"] .type-pill.expense { background-color: #482b32; color: #ffaaa5; }
+html[data-theme="dark"] .type-pill.income { background-color: #173a2c; color: #65d49a; }
+
+html[data-theme="dark"] .identity-heading h1,
+html[data-theme="dark"] .identity-field label,
+html[data-theme="dark"] .identity-brand,
+html[data-theme="dark"] .login-heading h1,
+html[data-theme="dark"] .login-field label,
+html[data-theme="dark"] .login-brand { color: var(--wf-ink); }
+
+html[data-theme="dark"] .identity-card h1,
+html[data-theme="dark"] .identity-field label,
+html[data-theme="dark"] .login-heading > p:last-child { color: var(--wf-ink); }
+
+html[data-theme="dark"] .login-signup,
+html[data-theme="dark"] .identity-footer { color: var(--wf-muted); }
+
+html[data-theme="dark"] .login-password-toggle:hover,
+html[data-theme="dark"] .identity-password-toggle:hover { background: #263246; color: var(--wf-ink); }
+
+html[data-theme="dark"] .identity-notice,
+html[data-theme="dark"] .login-placeholder-message { background: #1b3150; color: #b9d2ff; }
+html[data-theme="dark"] .identity-error,
+html[data-theme="dark"] .login-error { background: #3a2428; border-color: #69383d; color: #ffaaa5; }
+
+html[data-theme="dark"] .identity-page,
+html[data-theme="dark"] .login-page,
+html[data-theme="dark"] .register-page,
+html[data-theme="dark"] .reset-password-page {
+    background: radial-gradient(ellipse at top left, #1c2b43, transparent 55%), var(--wf-canvas);
+}
+
+html[data-theme="dark"] .alert-info { --bs-alert-bg: #1b3150; --bs-alert-color: #c2d7ff; --bs-alert-border-color: #2f4b70; }
+html[data-theme="dark"] .alert-success { --bs-alert-bg: #173a2c; --bs-alert-color: #9be4ba; --bs-alert-border-color: #285941; }
+html[data-theme="dark"] .alert-danger { --bs-alert-bg: #3a2428; --bs-alert-color: #ffaaa5; --bs-alert-border-color: #69383d; }
+html[data-theme="dark"] .budget-alert-toast { background: #3b2d19; border-color: #80602d; color: #ffe0a1; }
+
+/* Regras explícitas para os formulários com CSS isolado nas telas de autenticação. */
+html[data-theme="dark"] .login-page .login-input,
+html[data-theme="dark"] .identity-page .identity-input {
+    background-color: #141f2e;
+    border-color: #46556c;
+    color: var(--wf-ink);
+}
+html[data-theme="dark"] .login-page .login-input::placeholder,
+html[data-theme="dark"] .identity-page .identity-input::placeholder { color: #a8b3c4; }
+html[data-theme="dark"] .login-page .login-input:focus,
+html[data-theme="dark"] .identity-page .identity-input:focus {
+    background-color: #141f2e;
+    border-color: #8bb4ff;
+    color: var(--wf-ink);
+}
+html[data-theme="dark"] .login-page .login-field label,
+html[data-theme="dark"] .identity-page .identity-field label { color: var(--wf-ink); }
+html[data-theme="dark"] .identity-page .identity-field small,
+html[data-theme="dark"] .identity-page .identity-intro,
+html[data-theme="dark"] .login-page .login-heading > p:last-child { color: var(--wf-muted); }
+html[data-theme="dark"] .identity-page .identity-footer,
+html[data-theme="dark"] .identity-page .identity-security-note,
+html[data-theme="dark"] .login-page .login-signup { border-color: var(--wf-line); color: var(--wf-muted); }
+html[data-theme="dark"] .identity-page .identity-error,
+html[data-theme="dark"] .login-page .login-validation-summary:not(:empty) {
+    background-color: #3a2428;
+    border-color: #69383d;
+    color: #ffaaa5;
+}
+html[data-theme="dark"] .logout-page .logout-card,
+html[data-theme="dark"] .login-page .login-card,
+html[data-theme="dark"] .identity-page .identity-card {
+    background-color: var(--wf-surface);
+    border-color: var(--wf-line);
+    color: var(--wf-ink);
+}
+html[data-theme="dark"] .edit-transaction-panel .form-control,
+html[data-theme="dark"] .edit-transaction-panel .form-select {
+    background-color: #141f2e;
+    border-color: #46556c;
+    color: var(--wf-ink);
+}
+
+html[data-theme="dark"] .welcome-page {
+    background: radial-gradient(ellipse at 82% 12%, rgb(53 105 212 / 16%), transparent 38%), var(--wf-surface);
+    border-color: var(--wf-line);
+    color: var(--wf-ink);
+}
+html[data-theme="dark"] .welcome-page h1 { color: var(--wf-ink); }
+html[data-theme="dark"] .welcome-mark {
+    background: linear-gradient(145deg, #263b5b, #1b2b43);
+    border-color: #3a5680;
+    color: #a8c7ff;
+}
+html[data-theme="dark"] .welcome-page .btn-primary {
+    --bs-btn-bg: #2563eb;
+    --bs-btn-border-color: #2563eb;
+    --bs-btn-color: #fff;
+    --bs-btn-hover-bg: #1d4ed8;
+    --bs-btn-hover-border-color: #1d4ed8;
+    --bs-btn-hover-color: #fff;
+}
+html[data-theme="dark"] .welcome-page .btn-outline-primary {
+    --bs-btn-color: #a8c7ff;
+    --bs-btn-border-color: #648bd0;
+    --bs-btn-hover-bg: #243654;
+    --bs-btn-hover-border-color: #8bb4ff;
+    --bs-btn-hover-color: #d6e4ff;
+}
+
+/* Mantém os controles escuros mesmo quando uma página usa CSS isolado com estilos próprios. */
+html[data-theme="dark"] body .content .form-control,
+html[data-theme="dark"] body .content .form-select,
+html[data-theme="dark"] body .content .login-input,
+html[data-theme="dark"] body .content .identity-input {
+    background-color: #141f2e;
+    border-color: #46556c;
+    color: var(--wf-ink);
+}
+html[data-theme="dark"] body .content .form-control:focus,
+html[data-theme="dark"] body .content .form-select:focus,
+html[data-theme="dark"] body .content .login-input:focus,
+html[data-theme="dark"] body .content .identity-input:focus {
+    background-color: #141f2e;
+    border-color: #8bb4ff;
+    color: var(--wf-ink);
+}

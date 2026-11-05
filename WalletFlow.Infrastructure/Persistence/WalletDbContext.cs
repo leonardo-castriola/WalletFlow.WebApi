@@ -12,6 +12,7 @@ namespace WalletFlow.Infrastructure.Persistence
 
         public DbSet<Transacao> Transacoes { get; set; }
         public DbSet<MonthlyReportDelivery> MonthlyReportDeliveries { get; set; }
+        public DbSet<OrcamentoMensal> OrcamentosMensais { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -31,6 +32,18 @@ namespace WalletFlow.Infrastructure.Persistence
                 .HasOne<WalletUser>()
                 .WithMany()
                 .HasForeignKey(delivery => delivery.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<OrcamentoMensal>()
+                .HasIndex(item => new { item.UserId, item.Ano, item.Mes })
+                .IsUnique();
+            builder.Entity<OrcamentoMensal>()
+                .Property(item => item.Limite)
+                .HasPrecision(11, 2);
+            builder.Entity<OrcamentoMensal>()
+                .HasOne<WalletUser>()
+                .WithMany()
+                .HasForeignKey(item => item.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

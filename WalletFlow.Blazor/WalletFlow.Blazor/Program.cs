@@ -1,5 +1,6 @@
 using WalletFlow.Blazor.Client.Pages;
 using WalletFlow.Blazor.Components;
+using WalletFlow.Blazor.Components.Layout;
 using WalletFlow.Blazor.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -8,12 +9,14 @@ using WalletFlow.Infrastructure;
 using WalletFlow.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents()
     .AddAuthenticationStateSerialization();
+builder.Services.AddSignalR();
 
 builder.Services.AddWalletFlowInfrastructure(builder.Configuration, builder.Environment);
 builder.Services.AddIdentityCore<WalletUser>(options =>
@@ -118,6 +121,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapHub<BudgetAlertsHub>("/hubs/alertas-orcamento").RequireAuthorization();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()

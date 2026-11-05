@@ -201,6 +201,37 @@ namespace WalletFlow.Migrations
                     b.ToTable("MonthlyReportDeliveries");
                 });
 
+            modelBuilder.Entity("WalletFlow.Domain.Entities.OrcamentoMensal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("AlertaOitentaPorcentoEnviadoEmUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Ano")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Limite")
+                        .HasPrecision(11, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Mes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Ano", "Mes")
+                        .IsUnique();
+
+                    b.ToTable("OrcamentosMensais");
+                });
+
             modelBuilder.Entity("WalletFlow.Infrastructure.Persistence.WalletUser", b =>
                 {
                     b.Property<string>("Id")
@@ -325,6 +356,15 @@ namespace WalletFlow.Migrations
                 });
 
             modelBuilder.Entity("WalletFlow.Infrastructure.Persistence.MonthlyReportDelivery", b =>
+                {
+                    b.HasOne("WalletFlow.Infrastructure.Persistence.WalletUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WalletFlow.Domain.Entities.OrcamentoMensal", b =>
                 {
                     b.HasOne("WalletFlow.Infrastructure.Persistence.WalletUser", null)
                         .WithMany()

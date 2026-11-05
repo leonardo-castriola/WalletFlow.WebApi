@@ -1,0 +1,165 @@
+@page "/orcamento"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@using System.Globalization
+@using WalletFlow.Application.DTOs
+@using WalletFlow.Blazor.Services
+@inject TransacaoApiClient Api
+@inject IConfiguration Configuration
+
+<PageTitle>Orçamento mensal | WalletFlow</PageTitle>
+
+<div class="dashboard-header">
+    <div>
+        <p class="eyebrow">PLANEJAMENTO FINANCEIRO</p>
+        <h1>Orçamento mensal</h1>
+        <p class="text-secondary">Defina um limite de despesas e acompanhe seu uso durante o mês.</p>
+    </div>
+</div>
+
+<section class="panel budget-panel" aria-labelledby="budget-heading">
+    <div class="budget-config-grid">
+        <div class="budget-config-main">
+            <div class="budget-heading">
+                <p class="eyebrow">LIMITE DE DESPESAS</p>
+                <h2 id="budget-heading">@NomeDoMes(_mes) de @_ano</h2>
+            </div>
+
+            @if (_carregando)
+            {
+                <p class="text-secondary" role="status">Carregando orçamento...</p>
+            }
+            else
+            {
+                <EditForm class="budget-form" Model="this" OnValidSubmit="SalvarAsync" FormName="monthly-budget">
+                    <div class="budget-limit-field">
+                        <label class="form-label" for="budget-limit">Limite mensal (R$)</label>
+                        <InputNumber id="budget-limit" class="form-control" @bind-Value="_limite" min="0.01" step="0.01" />
+                    </div>
+                    <button class="btn btn-primary budget-save-button" type="submit" disabled="@_salvando">
+                        @(_salvando ? "Salvando..." : "Salvar limite")
+                    </button>
+                </EditForm>
+            }
+        </div>
+
+        <div class="budget-period" aria-label="Período do orçamento">
+            <div class="budget-period-field">
+                <label for="budget-month">Mês</label>
+                <InputSelect id="budget-month" class="form-select" @bind-Value="_mes" @bind:after="CarregarAsync">
+                    @for (var month = 1; month <= 12; month++)
+                    {
+                        <option value="@month">@NomeDoMes(month)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="budget-period-field budget-year-field">
+                <label for="budget-year">Ano</label>
+                <InputNumber id="budget-year" class="form-control" @bind-Value="_ano" @bind:after="CarregarAsync" />
+            </div>
+        </div>
+    </div>
+
+    @if (!_carregando)
+    {
+        @if (_orcamento is not null && _orcamento.Limite > 0)
+        {
+            var progress = Math.Clamp(_orcamento.PercentualUtilizado, 0m, 100m);
+            <div class="budget-summary">
+                <div class="budget-summary-values">
+                    <span>Despesas no mês</span>
+                    <strong>@_orcamento.Despesas.ToString("C", Cultura)</strong>
+                    <span>de @_orcamento.Limite.ToString("C", Cultura)</span>
+                </div>
+                <div class="progress budget-progress" role="progressbar" aria-label="Percentual do orçamento utilizado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@progress.ToString(CultureInfo.InvariantCulture)">
+                    <div class="progress-bar @(progress >= 80 ? "budget-progress-warning" : null)" style="width: @progress.ToString(CultureInfo.InvariantCulture)%"></div>
+                </div>
+                <p class="budget-usage">@_orcamento.PercentualUtilizado.ToString("N1", Cultura)% utilizado</p>
+                @if (_orcamento.PercentualUtilizado >= 80)
+                {
+                    <p class="budget-threshold-note" role="status">Você atingiu 80% do limite deste mês. O alerta em tempo real já foi sinalizado.</p>
+                }
+                else
+                {
+                    <p class="budget-threshold-note">Um alerta será exibido em tempo real quando as despesas atingirem 80% do limite.</p>
+                }
+            </div>
+        }
+        else if (_orcamento is not null)
+        {
+            <p class="budget-empty-state">Ainda não há um limite definido para este mês. Informe um valor para acompanhar suas despesas.</p>
+        }
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_mensagem))
+    {
+        <div class="alert alert-success" role="status">@_mensagem</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_erro))
+    {
+        <div class="alert alert-danger" role="alert">@_erro</div>
+    }
+</section>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("pt-BR");
+    private OrcamentoMensalDto? _orcamento;
+    private int _ano;
+    private int _mes;
+    private decimal _limite;
+    private bool _carregando = true;
+    private bool _salvando;
+    private string? _mensagem;
+    private string? _erro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(Configuration["Filters:TimeZoneId"] ?? "America/Sao_Paulo");
+        var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
+        _ano = now.Year;
+        _mes = now.Month;
+        await CarregarAsync();
+    }
+
+    private async Task CarregarAsync()
+    {
+        _carregando = true;
+        _erro = null;
+        _mensagem = null;
+        try
+        {
+            _orcamento = await Api.ObterOrcamentoMensalAsync(_ano, _mes);
+            _limite = _orcamento.Limite;
+        }
+        catch (Exception ex)
+        {
+            _erro = ex.Message;
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private async Task SalvarAsync()
+    {
+        _salvando = true;
+        _erro = null;
+        _mensagem = null;
+        try
+        {
+            _orcamento = await Api.SalvarOrcamentoMensalAsync(_ano, _mes, _limite);
+            _mensagem = "Limite mensal salvo com sucesso.";
+        }
+        catch (Exception ex)
+        {
+            _erro = ex.Message;
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private static string NomeDoMes(int mes) => Cultura.DateTimeFormat.GetMonthName(mes);
+}
