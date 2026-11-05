@@ -52,7 +52,9 @@ A solução separa o domínio, os casos de uso, a persistência e as interfaces 
 - `WalletFlow.Infrastructure`: Entity Framework Core, SQLite, Identity, repositórios e migrações; implementa as abstrações da aplicação.
 - `WalletFlow`: API REST e autenticação HTTP. Os controllers encaminham as operações para os casos de uso.
 - `WalletFlow.Blazor`: interface web e composição dos serviços de Identity e infraestrutura.
-- `WalletFlow.Tests` e `WalletFlow.BrowserTests`: testes de unidade e navegação.
+- `WalletFlow.Tests`: testes unitários das regras e serviços.
+- `WalletFlow.IntegrationTests`: testes da API real com `WebApplicationFactory` e SQLite isolado por teste, incluindo persistência e isolamento entre usuários.
+- `WalletFlow.BrowserTests`: testes de navegação da interface com Playwright e Google Chrome.
 
 As dependências seguem em direção ao domínio: Infrastructure implementa contratos definidos pela Application, enquanto API e Blazor compõem essas camadas na inicialização. O `WalletDbContext` e as migrações ficam em `WalletFlow.Infrastructure`.
 
@@ -235,7 +237,7 @@ As imagens abaixo foram capturadas na interface Swagger local, com a aplicação
 
 ## Testes
 
-Os testes xUnit verificam o saldo com banco vazio e com saldo negativo, as validações de valores, a aplicação dos filtros antes da paginação e a resposta segura do middleware de exceções.
+Os testes xUnit cobrem regras unitárias, comportamento da API e integração ponta a ponta entre endpoints e persistência. Os testes de integração usam `WebApplicationFactory` e um banco SQLite temporário isolado, sem acessar o banco de desenvolvimento.
 
 ```bash
 dotnet test WalletFlow.WebApi.slnx

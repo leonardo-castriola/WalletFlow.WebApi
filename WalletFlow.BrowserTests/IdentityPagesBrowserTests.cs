@@ -162,7 +162,7 @@ public sealed class IdentityPagesBrowserTests(WalletFlowBrowserFixture fixture)
                 $"A resposta de recuperação não apareceu. URL={page.Url}{Environment.NewLine}Conteúdo={body}{Environment.NewLine}Log da aplicação={fixture.ServerOutput}");
         }
 
-        Assert.Contains("Se houver uma conta confirmada para esse endereço", await response.InnerTextAsync());
+        Assert.Contains("Se houver uma conta para esse endereço", await response.InnerTextAsync());
     }
 
     [Fact]
