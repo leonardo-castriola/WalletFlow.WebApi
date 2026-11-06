@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @using System.Globalization
 @using WalletFlow.Application.DTOs
+@using WalletFlow.Blazor.Enums
 @using WalletFlow.Blazor.Services
 @inject TransacaoApiClient Api
 @inject IConfiguration Configuration
@@ -32,10 +33,39 @@
             else
             {
                 <EditForm class="budget-form" Model="this" OnValidSubmit="SalvarAsync" FormName="monthly-budget">
-                    <div class="budget-limit-field">
-                        <label class="form-label" for="budget-limit">Limite mensal (R$)</label>
-                        <InputNumber id="budget-limit" class="form-control" @bind-Value="_limite" min="0.01" step="0.01" />
+                    <div class="budget-mode-field">
+                        <label class="form-label" for="budget-mode">Definir limite por</label>
+                        <InputSelect id="budget-mode" class="form-select" @bind-Value="_modo">
+                            <option value="valor">Valor em reais</option>
+                            <option value="percentual">Percentual da receita</option>
+                        </InputSelect>
                     </div>
+                    <div class="budget-limit-field">
+                        @if (_modo == "percentual")
+                        {
+                            <label class="form-label" for="budget-percent">Percentual da receita (%)</label>
+                            <InputNumber id="budget-percent" class="form-control" @bind-Value="_percentual" min="0.01" max="100" step="0.1" />
+                        }
+                        else
+                        {
+                            <label class="form-label" for="budget-limit">Limite mensal (R$)</label>
+                            <InputNumber id="budget-limit" class="form-control" @bind-Value="_limite" min="0.01" step="0.01" />
+                        }
+                    </div>
+                    @if (_modo == "percentual")
+                    {
+                        <p class="budget-percent-preview">
+                            Receita no mês: <strong>@_receita.ToString("C", Cultura)</strong>
+                            @if (_receita > 0)
+                            {
+                                <span>· Limite equivalente: <strong>@LimitePercentual.ToString("C", Cultura)</strong></span>
+                            }
+                            else
+                            {
+                                <span>· Registre receitas neste mês para calcular o limite.</span>
+                            }
+                        </p>
+                    }
                     <button class="btn btn-primary budget-save-button" type="submit" disabled="@_salvando">
                         @(_salvando ? "Salvando..." : "Salvar limite")
                     </button>
@@ -107,6 +137,10 @@
     private int _ano;
     private int _mes;
     private decimal _limite;
+    private decimal _percentual = 50m;
+    private decimal _receita;
+    private string _modo = "valor";
+    private decimal LimitePercentual => decimal.Round(_receita * _percentual / 100m, 2);
     private bool _carregando = true;
     private bool _salvando;
     private string? _mensagem;
@@ -130,6 +164,10 @@
         {
             _orcamento = await Api.ObterOrcamentoMensalAsync(_ano, _mes);
             _limite = _orcamento.Limite;
+            var inicio = new DateOnly(_ano, _mes, 1);
+            var fim = inicio.AddMonths(1).AddDays(-1);
+            var receitas = await Api.ObterTodasTransacoesAsync(TipoTransacao.Receita, inicio, fim);
+            _receita = receitas.Sum(item => item.Valor);
         }
         catch (Exception ex)
         {
@@ -148,7 +186,21 @@
         _mensagem = null;
         try
         {
-            _orcamento = await Api.SalvarOrcamentoMensalAsync(_ano, _mes, _limite);
+            if (_modo == "percentual" && (_percentual <= 0 || _percentual > 100))
+            {
+                _erro = "Informe um percentual maior que zero e de até 100%.";
+                return;
+            }
+            var limiteFinal = _modo == "percentual" ? LimitePercentual : _limite;
+            if (limiteFinal <= 0)
+            {
+                _erro = _modo == "percentual"
+                    ? "Não é possível salvar o percentual sem receitas registradas neste mês."
+                    : "Informe um limite maior que zero.";
+                return;
+            }
+            _orcamento = await Api.SalvarOrcamentoMensalAsync(_ano, _mes, limiteFinal);
+            _limite = limiteFinal;
             _mensagem = "Limite mensal salvo com sucesso.";
         }
         catch (Exception ex)

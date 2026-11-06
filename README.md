@@ -22,7 +22,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Envio do extrato filtrado por período ao endereço de e-mail da própria conta, como PDF anexado com todos os lançamentos e seus totais.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
 - Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
-- Orçamento total de despesas configurável por usuário e por mês, com acompanhamento do valor gasto e percentual utilizado.
+- Orçamento total de despesas configurável por usuário e por mês, definido por valor em reais ou por percentual das receitas registradas no mês, com visualização do limite equivalente, acompanhamento do valor gasto e percentual utilizado.
 - Alerta em tempo real via SignalR quando as despesas mensais atingem 80% do limite; o envio fica registrado para evitar avisos repetidos no mesmo mês.
 - Tooltips individuais nos pontos dos gráficos para consultar os valores de cada série e mês; valores e percentuais das receitas e despesas também ficam disponíveis junto às visualizações.
 - Controles para mover os gráficos para cima ou para baixo no painel, com a ordem escolhida salva no navegador.
