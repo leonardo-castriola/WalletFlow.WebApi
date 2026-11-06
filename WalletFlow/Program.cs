@@ -1,5 +1,7 @@
 
 using System.Globalization;
+using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
 using WalletFlow.Api.Middleware;
@@ -18,6 +20,9 @@ builder.Services.AddSwaggerGen();
 
 // Configuração da API Key
 var apiKey = builder.Configuration["Authentication:ApiKey"];
+var jwtSigningKey = builder.Configuration["Authentication:Jwt:SigningKey"];
+var jwtIssuer = builder.Configuration["Authentication:Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Authentication:Jwt:Audience"];
 
 if (!builder.Environment.IsDevelopment() &&
     string.IsNullOrWhiteSpace(apiKey))
@@ -26,22 +31,45 @@ if (!builder.Environment.IsDevelopment() &&
         "Configure a chave da API na variável de ambiente " +
         "Authentication__ApiKey antes de iniciar fora de Development.");
 }
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || Encoding.UTF8.GetByteCount(jwtSigningKey) < 32 ||
+    string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+{
+    throw new InvalidOperationException(
+        "Configure Authentication:Jwt:SigningKey (pelo menos 32 bytes), Authentication:Jwt:Issuer e Authentication:Jwt:Audience. " +
+        "Use a mesma chave no host Blazor e na API; em produção, configure-a por variável de ambiente ou gerenciador de segredos.");
+}
 
-// Autenticação
+// A API exige, na mesma chamada, a identidade assinada do usuário e a credencial do serviço Blazor.
 builder.Services
-    .AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = ApiKeyAuthenticationHandler.SchemeName;
+        options.DefaultChallengeScheme = ApiKeyAuthenticationHandler.SchemeName;
+    })
     .AddScheme<
         Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
         ApiKeyAuthenticationHandler>(
         ApiKeyAuthenticationHandler.SchemeName,
+        _ => { })
+    .AddScheme<
+        Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
+        UserJwtAuthenticationHandler>(
+        UserJwtAuthenticationHandler.SchemeName,
         _ => { });
 
-// Autorização: exige autenticação por padrão
+var apiUserPolicy = new AuthorizationPolicyBuilder(
+        ApiKeyAuthenticationHandler.SchemeName,
+        UserJwtAuthenticationHandler.SchemeName)
+    .RequireAuthenticatedUser()
+    .RequireClaim(ApiKeyAuthenticationHandler.ServiceClaimType, ApiKeyAuthenticationHandler.ServiceClaimValue)
+    .RequireClaim(ClaimTypes.NameIdentifier)
+    .Build();
+
+// Todos os endpoints exigem a chave do serviço e um JWT válido vinculado ao usuário.
 builder.Services.AddAuthorization(options =>
 {
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
+    options.DefaultPolicy = apiUserPolicy;
+    options.FallbackPolicy = apiUserPolicy;
 });
 
 builder.Services.AddWalletFlowInfrastructure(builder.Configuration, builder.Environment);

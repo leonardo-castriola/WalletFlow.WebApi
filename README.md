@@ -35,6 +35,8 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Interface web Blazor com página inicial, painel de saldo, extrato e cadastro de transações integrado à API.
 - Tela de login responsiva na rota `/`, com validação, alternância de visibilidade da senha e atalhos para cadastro e recuperação.
 - Cadastro sem confirmação por e-mail, recuperação de senha por link enviado ao e-mail e proteção das rotas financeiras pelo ASP.NET Core Identity.
+- Cadastro e atualização do perfil com nome completo, telefone, CPF e endereço; ao informar um CEP com oito dígitos, a tela consulta o ViaCEP e preenche logradouro, bairro, cidade e UF para conferência.
+- Identificação do titular no relatório de movimentação financeira em PDF; a emissão exige que os dados cadastrais obrigatórios estejam completos.
 - Filtros de tipo e período no extrato, preservando paginação e ordenação das movimentações mais recentes.
 - Validação do formulário, confirmação após o cadastro e opção de cancelar sem persistir os dados.
 
@@ -142,7 +144,7 @@ O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro confirma 
 
 As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimento, o host Blazor e a API já apontam para `WalletFlow/Wallet.db`. Em produção, configure o mesmo caminho absoluto em `ConnectionStrings__DefaultConnection` para os dois processos. As migrações são aplicadas na inicialização. Transações preexistentes ficam sem proprietário e não aparecem para nenhuma conta até serem associadas por um processo administrativo.
 
-O host Blazor deriva o ID do usuário da sessão autenticada e envia esse ID à API em uma chamada servidor-a-servidor. A API valida a conta e restringe consulta, criação, edição, exclusão, listagem e saldo ao proprietário da transação. Em produção, mantenha a chave de serviço em `Authentication__ApiKey` nos dois processos; ela nunca é enviada pelo navegador. O Blazor e a API devem usar HTTPS.
+O host Blazor deriva o ID do usuário da sessão autenticada e emite um JWT assinado, com validade de três minutos, para cada chamada servidor-a-servidor. A API valida assinatura, emissor, audiência, validade e existência da conta; também exige a chave de serviço `X-API-Key` em produção. O ID não é aceito de cabeçalhos enviados pelo cliente. As consultas e alterações continuam limitadas ao proprietário. O Blazor e a API devem usar HTTPS; nenhuma dessas credenciais é enviada ao navegador.
 
 O host Blazor usa SMTP para recuperação de senha e para enviar o extrato filtrado à própria conta. A API também usa SMTP para os relatórios mensais. Em desenvolvimento, os dois projetos compartilham o mesmo `UserSecretsId`; host, porta, usuário e remetente ficam em `appsettings.Development.json`, e a senha deve ficar nos User Secrets. Tokens de redefinição expiram após uma hora. Em produção, configure estes valores por variáveis de ambiente ou por um gerenciador de segredos; não grave credenciais no repositório:
 
@@ -156,14 +158,16 @@ Email__Smtp__From=nao-responda@exemplo.com
 Email__Smtp__ImplicitTls=false
 ConnectionStrings__DefaultConnection=Data Source=/caminho/compartilhado/Wallet.db
 Authentication__ApiKey=<mesma chave forte no host Blazor e na API>
+Authentication__Jwt__SigningKey=<mesmo segredo aleatório com pelo menos 32 bytes no host Blazor e na API>
 ```
 
-Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. A senha SMTP local deve ser configurada nos User Secrets do host Blazor para testar a recuperação de senha, o envio do extrato e os relatórios. A API permite chamadas de desenvolvimento sem a chave de serviço, mas ainda exige um `X-User-ID` correspondente a uma conta existente.
+Em `Development`, o login fica em `http://localhost:5087/`; o campo de senha mantém o ícone de visualização dentro do controle. A senha SMTP local deve ser configurada nos User Secrets para testar a recuperação de senha, o envio do extrato e os relatórios. A API pode dispensar a chave de serviço em desenvolvimento, mas continua exigindo um JWT de usuário válido e existente.
 
 Configure a senha SMTP localmente sem colocá-la nos arquivos versionados:
 
 ```powershell
 dotnet user-secrets set "Email:Smtp:Password" "<senha-de-aplicativo>" --project WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj
+dotnet user-secrets set "Authentication:Jwt:SigningKey" "<segredo-aleatorio-de-pelo-menos-32-bytes>" --project WalletFlow/WalletFlow.csproj
 ```
 
 Exemplo no PowerShell:
@@ -171,14 +175,15 @@ Exemplo no PowerShell:
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
 $env:Authentication__ApiKey = 'substitua-por-uma-chave-forte'
+$env:Authentication__Jwt__SigningKey = 'substitua-por-um-segredo-aleatorio-de-pelo-menos-32-bytes'
 dotnet run --project WalletFlow/WalletFlow.csproj --no-launch-profile
 ```
 
-O host Blazor inclui `X-API-Key` e `X-User-ID` nas chamadas servidor-a-servidor. Não coloque a chave de API no cliente ou no navegador.
+Configure as duas variáveis de autenticação no host Blazor e na API. O host envia `X-API-Key` e `Authorization: Bearer` apenas em chamadas servidor-a-servidor. Não coloque nenhuma dessas chaves no cliente ou no navegador.
 
 ## Como usar
 
-O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas diretas de desenvolvimento, envie `X-User-ID` com o ID de uma conta existente; fora de `Development`, envie também a chave de serviço `X-API-Key`. O cabeçalho de usuário deve ser definido por um serviço confiável, nunca por um cliente público. O campo `tipo` usa `0` para despesa e `1` para receita.
+O cliente Blazor envia a identidade autenticada automaticamente por JWT. A API rejeita chamadas que tentem definir o usuário por `X-User-ID`; em produção também exige `X-API-Key`. Não exponha o segredo de assinatura ou a chave de serviço em clientes públicos. O campo `tipo` usa `0` para despesa e `1` para receita.
 
 | Método | Rota | O que faz |
 | --- | --- | --- |
@@ -202,6 +207,7 @@ O cliente Blazor envia a identidade autenticada automaticamente. Para chamadas d
 | --- | --- | --- |
 | Entrar | `/` | Entrar com e-mail e senha |
 | Criar conta | `/criar-conta` | Cadastrar conta e exibir confirmação de sucesso |
+| Meu cadastro | `/meu-cadastro` | Consultar e atualizar nome, telefone, CPF e endereço; preencher parte do endereço pela consulta de CEP |
 | Recuperar senha | `/esqueci-a-senha` | Solicitar link de redefinição por e-mail |
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
@@ -216,16 +222,11 @@ Na importação CSV, use cabeçalhos `Data`, `Descrição` e `Valor`; `Tipo` é 
 
 O orçamento é geral para todas as despesas da conta no mês selecionado. A apuração respeita `Filters:TimeZoneId` (padrão `America/Sao_Paulo`). O alerta em tempo real usa uma conexão SignalR autenticada pelo cookie do Blazor e é emitido ao salvar ou alterar transações pela interface; um único alerta fica registrado para cada usuário e mês.
 
+Na criação da conta e na tela “Meu cadastro”, a consulta do CEP usa o serviço público [ViaCEP](https://viacep.com.br/) para localizar logradouro, bairro, cidade e UF. O CEP é enviado ao serviço quando os oito dígitos são informados; confira os dados retornados e preencha o número e o complemento. Se a consulta falhar ou o CEP não for encontrado, os campos podem ser preenchidos manualmente. O PDF enviado por e-mail inclui os dados de identificação e endereço do titular.
+
 Ao salvar uma transação válida, a aplicação persiste os dados pela API e exibe a confirmação. Fechar a mensagem limpa o formulário. Cancelar limpa os campos sem enviar um cadastro.
 
-Exemplo de cadastro:
-
-```bash
-curl -X POST http://localhost:5250/api/Transacao \
-  -H "Content-Type: application/json" \
-  -H "X-User-ID: <id-da-sua-conta>" \
-  -d '{"descricao":"Salário","valor":3500.00,"tipo":1}'
-```
+Os endpoints da API são consumidos pelo host Blazor em chamadas servidor-a-servidor. Chamadas diretas precisam apresentar um JWT assinado por um emissor confiável e, em produção, também a chave de serviço; informar `X-User-ID` não concede identidade nem acesso.
 
 Na listagem, `page` começa em `1`; `pageSize` aceita valores de `1` a `100` e, por padrão, é `50`. O filtro aceita qualquer combinação de `tipo`, `dataInicio` e `dataFim`. As datas devem seguir ISO 8601; quando ambas são informadas, `dataInicio` precisa ser anterior ou igual a `dataFim`. A resposta paginada contém `items`, `page`, `pageSize`, `totalCount` e `totalPages`.
 

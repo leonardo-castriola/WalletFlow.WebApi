@@ -1,12 +1,24 @@
 @page "/inicio"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using WalletFlow.Infrastructure.Persistence
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<WalletUser> UserManager
 
-<PageTitle>Boas-vindas | Fluxo de Carteira</PageTitle>
+<PageTitle>Início | WalletFlow</PageTitle>
 
 <section class="welcome-page">
     <div class="welcome-mark" aria-hidden="true">WF</div>
     <p class="eyebrow">FLUXO DE CARTEIRA</p>
-    <h1>Seja bem-vindo à aplicação de “Fluxo de Carteira”</h1>
+    @if (!string.IsNullOrWhiteSpace(_nomeExibicao))
+    {
+        <h1>Olá, @_nomeExibicao! Seja bem-vindo(a) ao seu fluxo de carteira.</h1>
+    }
+    else
+    {
+        <h1>Seja bem-vindo(a) ao seu fluxo de carteira.</h1>
+    }
     <p class="welcome-copy">Acesse o menu para conferir o saldo ou adicionar novas movimentações.</p>
 
     <div class="welcome-actions">
@@ -19,3 +31,17 @@
         <span>Use o menu lateral para navegar pelo painel, extrato e cadastro de movimentações.</span>
     </div>
 </section>
+
+@code {
+    private string? _nomeExibicao;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        var user = await UserManager.GetUserAsync(principal);
+        if (string.IsNullOrWhiteSpace(user?.NomeCompleto)) return;
+
+        var partes = user.NomeCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        _nomeExibicao = partes.Length > 1 ? $"{partes[0]} {partes[^1]}" : partes[0];
+    }
+}

@@ -1,0 +1,141 @@
+@page "/meu-cadastro"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Identity
+@using WalletFlow.Infrastructure.Persistence
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<WalletUser> UserManager
+
+<PageTitle>Meu cadastro | WalletFlow</PageTitle>
+
+<div class="dashboard-header">
+    <div><p class="eyebrow">DADOS DA CONTA</p><h1>Meu cadastro</h1><p class="text-secondary">Mantenha seus dados atualizados para identificar seus relatórios financeiros.</p></div>
+</div>
+
+<section class="panel profile-panel">
+    @if (!string.IsNullOrWhiteSpace(_mensagem)) { <div class="alert alert-success" role="status">@_mensagem</div> }
+    @if (!string.IsNullOrWhiteSpace(_erro)) { <div class="alert alert-danger" role="alert">@_erro</div> }
+
+    @if (_carregando)
+    {
+        <p class="empty-state" role="status">Carregando seus dados...</p>
+    }
+    else
+    {
+        <EditForm Model="_model" OnValidSubmit="SalvarAsync" class="profile-form">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="profile-fields">
+                <div><label class="form-label" for="profile-name">Nome completo</label><InputText id="profile-name" class="form-control" autocomplete="name" maxlength="120" @bind-Value="_model.NomeCompleto" /><ValidationMessage For="@(() => _model.NomeCompleto)" /></div>
+                <div><label class="form-label" for="profile-phone">Telefone</label><InputText id="profile-phone" class="form-control" type="tel" autocomplete="tel" placeholder="(21) 99999-9999" @bind-Value="_model.Telefone" /><ValidationMessage For="@(() => _model.Telefone)" /></div>
+                <div><label class="form-label" for="profile-cpf">CPF</label><InputText id="profile-cpf" class="form-control" autocomplete="off" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" @bind-Value="_model.Cpf" /><ValidationMessage For="@(() => _model.Cpf)" /></div>
+                <div><label class="form-label" for="profile-cep">CEP</label><InputText id="profile-cep" class="form-control" autocomplete="postal-code" inputmode="numeric" maxlength="9" placeholder="00000-000" @bind-Value="_model.Cep" /><ValidationMessage For="@(() => _model.Cep)" /><small id="profile-cep-status" role="status" aria-live="polite" class="form-text">Digite o CEP para preencher o endereço automaticamente.</small></div>
+                <div class="profile-full"><label class="form-label" for="profile-street">Logradouro</label><InputText id="profile-street" class="form-control" autocomplete="address-line1" maxlength="160" @bind-Value="_model.Logradouro" /><ValidationMessage For="@(() => _model.Logradouro)" /></div>
+                <div><label class="form-label" for="profile-number">Número</label><InputText id="profile-number" class="form-control" maxlength="30" @bind-Value="_model.Numero" /><ValidationMessage For="@(() => _model.Numero)" /></div>
+                <div><label class="form-label" for="profile-complement">Complemento <span class="text-secondary">(opcional)</span></label><InputText id="profile-complement" class="form-control" autocomplete="address-line2" maxlength="100" @bind-Value="_model.Complemento" /></div>
+                <div><label class="form-label" for="profile-neighborhood">Bairro</label><InputText id="profile-neighborhood" class="form-control" autocomplete="address-level3" maxlength="100" @bind-Value="_model.Bairro" /><ValidationMessage For="@(() => _model.Bairro)" /></div>
+                <div><label class="form-label" for="profile-city">Cidade</label><InputText id="profile-city" class="form-control" autocomplete="address-level2" maxlength="100" @bind-Value="_model.Cidade" /><ValidationMessage For="@(() => _model.Cidade)" /></div>
+                <div><label class="form-label" for="profile-state">Estado (UF)</label><InputText id="profile-state" class="form-control" autocomplete="address-level1" maxlength="2" placeholder="RJ" @bind-Value="_model.Estado" /><ValidationMessage For="@(() => _model.Estado)" /></div>
+            </div>
+            <button class="btn btn-primary" type="submit" disabled="@_salvando">@(_salvando ? "Salvando..." : "Salvar cadastro")</button>
+        </EditForm>
+    }
+</section>
+
+@code {
+    private readonly ProfileModel _model = new();
+    private string? _userId;
+    private string? _mensagem;
+    private string? _erro;
+    private bool _carregando = true;
+    private bool _salvando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        _userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var user = string.IsNullOrWhiteSpace(_userId) ? null : await UserManager.FindByIdAsync(_userId);
+        if (user is null)
+        {
+            _erro = "Não foi possível carregar os dados desta conta.";
+        }
+        else
+        {
+            _model.NomeCompleto = user.NomeCompleto ?? string.Empty;
+            _model.Telefone = user.PhoneNumber ?? string.Empty;
+            _model.Cpf = user.Cpf ?? string.Empty;
+            _model.Cep = user.EnderecoCep ?? string.Empty;
+            _model.Logradouro = user.EnderecoLogradouro ?? string.Empty;
+            _model.Numero = user.EnderecoNumero ?? string.Empty;
+            _model.Complemento = user.EnderecoComplemento;
+            _model.Bairro = user.EnderecoBairro ?? string.Empty;
+            _model.Cidade = user.EnderecoCidade ?? string.Empty;
+            _model.Estado = user.EnderecoEstado ?? string.Empty;
+        }
+        _carregando = false;
+    }
+
+    private async Task SalvarAsync()
+    {
+        _salvando = true;
+        _erro = _mensagem = null;
+        try
+        {
+            var user = string.IsNullOrWhiteSpace(_userId) ? null : await UserManager.FindByIdAsync(_userId);
+            if (user is null) { _erro = "Não foi possível localizar esta conta. Entre novamente e tente outra vez."; return; }
+
+            user.NomeCompleto = _model.NomeCompleto.Trim();
+            user.PhoneNumber = _model.Telefone.Trim();
+            user.Cpf = SomenteDigitos(_model.Cpf);
+            user.EnderecoCep = SomenteDigitos(_model.Cep);
+            user.EnderecoLogradouro = _model.Logradouro.Trim();
+            user.EnderecoNumero = _model.Numero.Trim();
+            user.EnderecoComplemento = string.IsNullOrWhiteSpace(_model.Complemento) ? null : _model.Complemento.Trim();
+            user.EnderecoBairro = _model.Bairro.Trim();
+            user.EnderecoCidade = _model.Cidade.Trim();
+            user.EnderecoEstado = _model.Estado.Trim().ToUpperInvariant();
+
+            var result = await UserManager.UpdateAsync(user);
+            if (!result.Succeeded) { _erro = string.Join(" ", result.Errors.Select(error => error.Description)); return; }
+            _mensagem = "Cadastro atualizado com sucesso.";
+        }
+        finally { _salvando = false; }
+    }
+
+    private static string SomenteDigitos(string valor) => new(valor.Where(char.IsDigit).ToArray());
+
+    private sealed class ProfileModel
+    {
+        [Required(ErrorMessage = "Informe seu nome completo.")]
+        [StringLength(120)]
+        public string NomeCompleto { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Informe seu telefone.")]
+        [Phone(ErrorMessage = "Informe um telefone válido com DDD.")]
+        public string Telefone { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Informe seu CPF.")]
+        [CpfValido(ErrorMessage = "Informe um CPF válido.")]
+        public string Cpf { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Informe seu CEP.")]
+        [RegularExpression(@"^\d{5}-?\d{3}$", ErrorMessage = "Informe um CEP válido.")]
+        public string Cep { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Informe o logradouro.")]
+        [StringLength(160)]
+        public string Logradouro { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Informe o número do endereço.")]
+        [StringLength(30)]
+        public string Numero { get; set; } = string.Empty;
+        [StringLength(100)]
+        public string? Complemento { get; set; }
+        [Required(ErrorMessage = "Informe o bairro.")]
+        [StringLength(100)]
+        public string Bairro { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Informe a cidade.")]
+        [StringLength(100)]
+        public string Cidade { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Informe a UF.")]
+        [RegularExpression(@"^[A-Za-z]{2}$", ErrorMessage = "Informe a sigla de dois caracteres do estado.")]
+        public string Estado { get; set; } = string.Empty;
+    }
+}

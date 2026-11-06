@@ -1,6 +1,13 @@
 (() => {
     const storageKey = 'walletflow-theme';
 
+    // O arquivo pode ser avaliado novamente durante navegações aprimoradas.
+    // Mantém um único conjunto de listeners para que um clique alterne o tema uma só vez.
+    if (window.walletFlowTheme?.initialized) {
+        window.walletFlowTheme.sync();
+        return;
+    }
+
     function readPreference() {
         // localStorage é por origem e funciona igualmente em todas as rotas e
         // após o login/logout. Ele evita que cookies antigos por caminho
@@ -46,7 +53,16 @@
         updateButtons(isDark);
     }
 
+    function sync() {
+        const savedTheme = readPreference();
+        const currentTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        if (currentTheme !== savedTheme) apply(savedTheme);
+        else updateButtons(savedTheme === 'dark');
+    }
+
     window.walletFlowTheme = {
+        initialized: true,
+        sync,
         toggle() {
             const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
             apply(nextTheme);
@@ -76,10 +92,16 @@
             try { document.cookie = `${storageKey}=${theme}; path=/; max-age=31536000; samesite=lax`; } catch { }
         }
     });
-    window.addEventListener('pageshow', () => apply(readPreference()));
-    document.addEventListener('enhancedload', () => apply(readPreference()));
+    window.addEventListener('pageshow', sync);
+    window.addEventListener('focus', sync);
+    document.addEventListener('enhancedload', sync);
 
-    // O controle pode ser renderizado depois pelo AuthorizeView do Blazor.
-    new MutationObserver(() => updateButtons(document.documentElement.dataset.theme === 'dark'))
-        .observe(document.documentElement, { childList: true, subtree: true });
+    // Blazor pode substituir partes do DOM ou restaurar atributos durante a navegação.
+    // Reaplica a preferência salva e sincroniza o botão depois dessas atualizações.
+    new MutationObserver(sync).observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme'],
+        childList: true,
+        subtree: true
+    });
 })();

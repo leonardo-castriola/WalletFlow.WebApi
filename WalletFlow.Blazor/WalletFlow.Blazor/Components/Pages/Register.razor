@@ -34,9 +34,35 @@
             <EditForm Model="_model!" FormName="register" OnValidSubmit="RegisterAsync" Enhance class="identity-form">
                 <DataAnnotationsValidator />
                 <div class="identity-field">
+                    <label for="register-name">Nome completo</label>
+                    <InputText id="register-name" class="identity-input" autocomplete="name" maxlength="120" @bind-Value="_model!.NomeCompleto" />
+                    <ValidationMessage For="@(() => _model!.NomeCompleto)" />
+                </div>
+                <div class="identity-field">
                     <label for="register-email">E-mail</label>
                     <InputText id="register-email" class="identity-input" type="email" autocomplete="email" @bind-Value="_model!.Email" />
                     <ValidationMessage For="@(() => _model!.Email)" />
+                </div>
+                <div class="identity-field">
+                    <label for="register-phone">Telefone</label>
+                    <InputText id="register-phone" class="identity-input" type="tel" autocomplete="tel" placeholder="(21) 99999-9999" @bind-Value="_model!.Telefone" />
+                    <ValidationMessage For="@(() => _model!.Telefone)" />
+                </div>
+                <div class="identity-field">
+                    <label for="register-cpf">CPF</label>
+                    <InputText id="register-cpf" class="identity-input" autocomplete="off" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" @bind-Value="_model!.Cpf" />
+                    <ValidationMessage For="@(() => _model!.Cpf)" />
+                </div>
+
+                <p class="identity-section-title">Endereço completo</p>
+                <div class="identity-address-grid">
+                    <div class="identity-field"><label for="register-cep">CEP</label><InputText id="register-cep" class="identity-input" autocomplete="postal-code" inputmode="numeric" maxlength="9" placeholder="00000-000" @bind-Value="_model!.Cep" /><ValidationMessage For="@(() => _model!.Cep)" /><small id="register-cep-status" role="status" aria-live="polite" class="form-text">Digite o CEP para preencher o endereço automaticamente.</small></div>
+                    <div class="identity-field"><label for="register-state">Estado (UF)</label><InputText id="register-state" class="identity-input" autocomplete="address-level1" maxlength="2" placeholder="RJ" @bind-Value="_model!.Estado" /><ValidationMessage For="@(() => _model!.Estado)" /></div>
+                    <div class="identity-field full-width"><label for="register-street">Logradouro</label><InputText id="register-street" class="identity-input" autocomplete="address-line1" maxlength="160" placeholder="Rua, avenida..." @bind-Value="_model!.Logradouro" /><ValidationMessage For="@(() => _model!.Logradouro)" /></div>
+                    <div class="identity-field"><label for="register-number">Número</label><InputText id="register-number" class="identity-input" autocomplete="off" maxlength="30" @bind-Value="_model!.Numero" /><ValidationMessage For="@(() => _model!.Numero)" /></div>
+                    <div class="identity-field"><label for="register-complement">Complemento <span>(opcional)</span></label><InputText id="register-complement" class="identity-input" autocomplete="address-line2" maxlength="100" @bind-Value="_model!.Complemento" /></div>
+                    <div class="identity-field"><label for="register-neighborhood">Bairro</label><InputText id="register-neighborhood" class="identity-input" autocomplete="address-level3" maxlength="100" @bind-Value="_model!.Bairro" /><ValidationMessage For="@(() => _model!.Bairro)" /></div>
+                    <div class="identity-field"><label for="register-city">Cidade</label><InputText id="register-city" class="identity-input" autocomplete="address-level2" maxlength="100" @bind-Value="_model!.Cidade" /><ValidationMessage For="@(() => _model!.Cidade)" /></div>
                 </div>
                 <div class="identity-field">
                     <label for="register-password">Senha</label>
@@ -87,7 +113,17 @@
         {
             UserName = model.Email.Trim(),
             Email = model.Email.Trim(),
-            EmailConfirmed = true
+            EmailConfirmed = true,
+            NomeCompleto = model.NomeCompleto.Trim(),
+            PhoneNumber = model.Telefone.Trim(),
+            Cpf = SomenteDigitos(model.Cpf),
+            EnderecoCep = SomenteDigitos(model.Cep),
+            EnderecoLogradouro = model.Logradouro.Trim(),
+            EnderecoNumero = model.Numero.Trim(),
+            EnderecoComplemento = string.IsNullOrWhiteSpace(model.Complemento) ? null : model.Complemento.Trim(),
+            EnderecoBairro = model.Bairro.Trim(),
+            EnderecoCidade = model.Cidade.Trim(),
+            EnderecoEstado = model.Estado.Trim().ToUpperInvariant()
         };
         var result = await UserManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
@@ -108,9 +144,48 @@
 
     private sealed class RegisterModel
     {
+        [Required(ErrorMessage = "Informe seu nome completo.")]
+        [StringLength(120, ErrorMessage = "O nome deve ter até 120 caracteres.")]
+        public string NomeCompleto { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Informe seu e-mail.")]
         [EmailAddress(ErrorMessage = "Informe um endereço de e-mail válido.")]
         public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe seu telefone.")]
+        [Phone(ErrorMessage = "Informe um telefone válido com DDD.")]
+        public string Telefone { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe seu CPF.")]
+        [CpfValido(ErrorMessage = "Informe um CPF válido.")]
+        public string Cpf { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe seu CEP.")]
+        [RegularExpression(@"^\d{5}-?\d{3}$", ErrorMessage = "Informe um CEP válido.")]
+        public string Cep { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe o logradouro.")]
+        [StringLength(160)]
+        public string Logradouro { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe o número do endereço.")]
+        [StringLength(30)]
+        public string Numero { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string? Complemento { get; set; }
+
+        [Required(ErrorMessage = "Informe o bairro.")]
+        [StringLength(100)]
+        public string Bairro { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe a cidade.")]
+        [StringLength(100)]
+        public string Cidade { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe a UF.")]
+        [RegularExpression(@"^[A-Za-z]{2}$", ErrorMessage = "Informe a sigla de dois caracteres do estado.")]
+        public string Estado { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe uma senha.")]
         [MinLength(12, ErrorMessage = "A senha deve ter pelo menos 12 caracteres.")]
@@ -120,4 +195,6 @@
         [Compare(nameof(Password), ErrorMessage = "As senhas não coincidem.")]
         public string ConfirmPassword { get; set; } = string.Empty;
     }
+
+    private static string SomenteDigitos(string valor) => new(valor.Where(char.IsDigit).ToArray());
 }

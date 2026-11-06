@@ -32,6 +32,10 @@
 @if (!string.IsNullOrWhiteSpace(_erro))
 {
     <div class="alert alert-danger" role="alert">@_erro</div>
+    @if (_erro.StartsWith("Complete seu cadastro", StringComparison.Ordinal))
+    {
+        <p><a class="btn btn-outline-primary mb-3" href="/meu-cadastro">Completar meu cadastro</a></p>
+    }
 }
 @if (!string.IsNullOrWhiteSpace(_mensagem))
 {
@@ -195,12 +199,18 @@
             var user = await UserManager.GetUserAsync(authState.User);
             if (string.IsNullOrWhiteSpace(user?.Email))
                 throw new UnauthorizedAccessException("Não foi possível identificar o e-mail da sua conta. Entre novamente.");
+            if (string.IsNullOrWhiteSpace(user.NomeCompleto) || string.IsNullOrWhiteSpace(user.Cpf)
+                || string.IsNullOrWhiteSpace(user.PhoneNumber) || string.IsNullOrWhiteSpace(user.EnderecoCep)
+                || string.IsNullOrWhiteSpace(user.EnderecoLogradouro) || string.IsNullOrWhiteSpace(user.EnderecoNumero)
+                || string.IsNullOrWhiteSpace(user.EnderecoBairro) || string.IsNullOrWhiteSpace(user.EnderecoCidade)
+                || string.IsNullOrWhiteSpace(user.EnderecoEstado))
+                throw new InvalidOperationException("Complete seu cadastro com nome, telefone, CPF e endereço completo antes de solicitar o relatório.");
 
             var tipo = LerTipoFiltro();
             var transacoes = await Api.ObterTodasTransacoesAsync(tipo, inicio, fim);
             var periodo = $"{inicio?.ToString("dd/MM/yyyy", Cultura) ?? "início"} a {fim?.ToString("dd/MM/yyyy", Cultura) ?? "hoje"}";
             var tipoSelecionado = tipo?.ToString() ?? "Todos";
-            var pdf = ExtratoPdfGenerator.Gerar(transacoes, periodo, tipoSelecionado, Api.ConverterParaFusoConfigurado);
+            var pdf = ExtratoPdfGenerator.Gerar(transacoes, user, periodo, tipoSelecionado, Api.ConverterParaFusoConfigurado);
             var html = MontarMensagemExtratoHtml(transacoes, periodo, tipoSelecionado);
             var nomeArquivo = $"walletflow-extrato-{DateTime.Now:yyyy-MM-dd}.pdf";
             await EmailSender.SendAsync(

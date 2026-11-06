@@ -3,6 +3,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using WalletFlow.Blazor.DTOs;
+using WalletFlow.Infrastructure.Persistence;
 
 namespace WalletFlow.Blazor.Services;
 
@@ -12,12 +13,27 @@ public static class ExtratoPdfGenerator
 
     public static byte[] Gerar(
         IReadOnlyList<TransacaoRespostaDto> transacoes,
+        WalletUser titular,
         string periodo,
         string tipo,
         Func<DateTimeOffset, DateTimeOffset> converterFuso)
     {
         var receitas = transacoes.Where(item => item.TipoFormatado == "Receita").Sum(item => item.Valor);
         var despesas = transacoes.Where(item => item.TipoFormatado == "Despesa").Sum(item => item.Valor);
+        var cpf = titular.Cpf?.Length == 11
+            ? $"{titular.Cpf[..3]}.{titular.Cpf[3..6]}.{titular.Cpf[6..9]}-{titular.Cpf[9..]}"
+            : titular.Cpf ?? string.Empty;
+        var cep = titular.EnderecoCep?.Length == 8
+            ? $"{titular.EnderecoCep[..5]}-{titular.EnderecoCep[5..]}"
+            : titular.EnderecoCep ?? string.Empty;
+        var endereco = string.Join(", ", new[]
+        {
+            $"{titular.EnderecoLogradouro}, {titular.EnderecoNumero}",
+            titular.EnderecoComplemento,
+            titular.EnderecoBairro,
+            $"{titular.EnderecoCidade} - {titular.EnderecoEstado}",
+            cep
+        }.Where(parte => !string.IsNullOrWhiteSpace(parte)));
 
         return Document.Create(document =>
             document.Page(page =>
@@ -37,6 +53,15 @@ public static class ExtratoPdfGenerator
                 page.Content().PaddingTop(18).Column(content =>
                 {
                     content.Spacing(14);
+                    content.Item().Border(1).BorderColor("#E4E7EC").Padding(10).Column(profile =>
+                    {
+                        profile.Spacing(4);
+                        profile.Item().Text("DADOS DO TITULAR").FontSize(7).SemiBold().FontColor("#2563EB");
+                        profile.Item().Text("Nome: " + titular.NomeCompleto).FontSize(9).SemiBold().FontColor("#172033");
+                        profile.Item().Text("E-mail: " + titular.Email + "   •   Telefone: " + titular.PhoneNumber).FontSize(8);
+                        profile.Item().Text("CPF: " + cpf).FontSize(8);
+                        profile.Item().Text("Endereço: " + endereco).FontSize(8);
+                    });
                     content.Item().Row(row =>
                     {
                         Resumo(row.RelativeItem(), "RECEITAS", receitas.ToString("C", Cultura), "#EAF8F0", "#157347");

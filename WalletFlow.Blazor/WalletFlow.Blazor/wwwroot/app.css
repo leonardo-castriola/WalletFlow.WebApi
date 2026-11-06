@@ -176,3 +176,14 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.profile-panel { max-width: 900px; }
+.profile-form { display: grid; gap: 1.25rem; }
+.profile-fields { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.profile-fields > div { min-width: 0; }
+.profile-fields .profile-full { grid-column: 1 / -1; }
+.profile-form .validation-message { color: var(--wf-danger, #b42318); font-size: .82rem; }
+@media (max-width: 640px) {
+    .profile-fields { grid-template-columns: minmax(0, 1fr); }
+    .profile-fields .profile-full { grid-column: auto; }
+}

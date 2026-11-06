@@ -30,7 +30,10 @@ public sealed class WalletFlowApiFactory : WebApplicationFactory<Program>
             {
                 ["ConnectionStrings:DefaultConnection"] =
                     $"Data Source={Path.Combine(_temporaryDirectory, "WalletFlow.IntegrationTests.db")}",
-                ["Authentication:ApiKey"] = "integration-test-api-key"
+                ["Authentication:ApiKey"] = "integration-test-api-key",
+                ["Authentication:Jwt:SigningKey"] = "integration-test-jwt-signing-key-32-bytes-minimum",
+                ["Authentication:Jwt:Issuer"] = "WalletFlow",
+                ["Authentication:Jwt:Audience"] = "WalletFlow.Api"
             });
         });
 

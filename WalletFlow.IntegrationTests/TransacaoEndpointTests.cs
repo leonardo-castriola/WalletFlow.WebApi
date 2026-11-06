@@ -1,5 +1,10 @@
 using System.Net;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
 using WalletFlow.Application.DTOs;
 using WalletFlow.Domain.Enums;
 using Xunit;
@@ -8,12 +13,15 @@ namespace WalletFlow.IntegrationTests;
 
 public sealed class TransacaoEndpointTests : IAsyncLifetime
 {
+    private const string ApiKey = "integration-test-api-key";
+    private const string JwtSigningKey = "integration-test-jwt-signing-key-32-bytes-minimum";
     private readonly WalletFlowApiFactory _factory = new();
     private HttpClient _client = null!;
 
     public async Task InitializeAsync()
     {
         _client = _factory.CreateClient();
+        _client.DefaultRequestHeaders.Add("X-API-Key", ApiKey);
         await _factory.CriarUsuarioAsync("usuario-1");
         await _factory.CriarUsuarioAsync("usuario-2");
     }
@@ -129,7 +137,9 @@ public sealed class TransacaoEndpointTests : IAsyncLifetime
     [Fact]
     public async Task RequisicaoSemIdentidadeERejeitada()
     {
+        _client.DefaultRequestHeaders.Authorization = null;
         _client.DefaultRequestHeaders.Remove("X-User-ID");
+        _client.DefaultRequestHeaders.Add("X-User-ID", "usuario-1");
         using var resposta = await _client.GetAsync("/api/Transacao");
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
@@ -137,7 +147,18 @@ public sealed class TransacaoEndpointTests : IAsyncLifetime
     private void UsarUsuario(string userId)
     {
         _client.DefaultRequestHeaders.Remove("X-User-ID");
-        _client.DefaultRequestHeaders.Add("X-User-ID", userId);
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSigningKey)),
+            SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            "WalletFlow",
+            "WalletFlow.Api",
+            [new Claim(JwtRegisteredClaimNames.Sub, userId)],
+            DateTime.UtcNow,
+            DateTime.UtcNow.AddMinutes(3),
+            credentials);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", new JwtSecurityTokenHandler().WriteToken(token));
     }
 
     private async Task<int> CriarTransacaoAsync(string descricao, decimal valor, TipoTransacao tipo)

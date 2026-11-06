@@ -15,7 +15,7 @@
     border: 1px solid #e4e7ec;
     border-radius: 1.25rem;
     box-shadow: 0 20px 55px rgb(16 24 40 / 9%);
-    max-width: 450px;
+    max-width: 620px;
     padding: clamp(1.5rem, 5vw, 2.75rem);
     width: 100%;
 }
@@ -40,8 +40,12 @@
 .identity-heading h1 { color: #172033; font-size: clamp(1.65rem, 4vw, 2rem); font-weight: 750; letter-spacing: -.035em; margin: 0 0 .45rem; }
 .identity-intro { color: #667085; font-size: .93rem; margin: 0; }
 .identity-page ::deep .identity-form { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr); }
+.identity-section-title { border-bottom: 1px solid #edf0f4; color: #344054; font-size: .9rem; font-weight: 700; margin: .25rem 0 -.2rem; padding-bottom: .5rem; }
+.identity-address-grid { display: grid; gap: .9rem 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.identity-address-grid .full-width { grid-column: 1 / -1; }
 .identity-field { display: grid; gap: .45rem; grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .identity-field label { color: #344054; font-size: .86rem; font-weight: 650; }
+.identity-field label span { color: #667085; font-size: .78rem; font-weight: 400; }
 .identity-field small { color: #667085; font-size: .76rem; }
 .identity-page ::deep .identity-input { background: #fff; border: 1px solid #d0d5dd; border-radius: .65rem; box-sizing: border-box; color: #172033; display: block; font: inherit; min-height: 3rem; outline: none; padding: .7rem .85rem; transition: border-color .16s ease, box-shadow .16s ease; width: 100%; }
 .identity-page ::deep .identity-input:focus { border-color: #84adf5; box-shadow: 0 0 0 .22rem rgb(37 99 235 / 18%); }
@@ -71,6 +75,8 @@
     .identity-page { margin: -.5rem -.75rem 0; min-height: calc(100vh - 7rem); padding: 1rem; }
     .identity-card { border-radius: 1rem; box-shadow: 0 12px 34px rgb(16 24 40 / 8%); padding: 1.5rem 1.25rem; }
     .identity-brand { margin-bottom: 1.8rem; }
+    .identity-address-grid { grid-template-columns: minmax(0, 1fr); }
+    .identity-address-grid .full-width { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,9 +1,13 @@
 using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using WalletFlow.Blazor.Components.Layout;
 using WalletFlow.Blazor.DTOs;
 using WalletFlow.Blazor.Enums;
@@ -20,6 +24,7 @@ public sealed class TransacaoApiClient(
     IHubContext<BudgetAlertsHub> alertHub,
     ILogger<TransacaoApiClient> logger)
 {
+    private static readonly HttpRequestOptionsKey<string> UserIdOption = new("WalletFlow.UserId");
     private readonly TimeZoneInfo _timeZone = TimeZoneInfo.FindSystemTimeZoneById(
         configuration["Filters:TimeZoneId"] ?? "America/Sao_Paulo");
 
@@ -216,7 +221,9 @@ public sealed class TransacaoApiClient(
     }
 
     private static string UserIdDaRequisicao(HttpRequestMessage request) =>
-        request.Headers.GetValues("X-User-ID").Single();
+        request.Options.TryGetValue(UserIdOption, out var userId)
+            ? userId
+            : throw new InvalidOperationException("A requisição não contém o usuário autenticado.");
 
     public async Task<decimal> ObterSaldoAsync(CancellationToken cancellationToken = default)
     {
@@ -264,8 +271,29 @@ public sealed class TransacaoApiClient(
         if (string.IsNullOrWhiteSpace(userId))
             throw new UnauthorizedAccessException("É necessário entrar para acessar suas transações.");
 
+        var signingKey = configuration["Authentication:Jwt:SigningKey"];
+        var issuer = configuration["Authentication:Jwt:Issuer"];
+        var audience = configuration["Authentication:Jwt:Audience"];
+        if (string.IsNullOrWhiteSpace(signingKey) || Encoding.UTF8.GetByteCount(signingKey) < 32 ||
+            string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
+            throw new InvalidOperationException("A configuração de autenticação JWT do host Blazor está incompleta.");
+
+        var now = DateTime.UtcNow;
+        var signingCredentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+            SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            issuer,
+            audience,
+            [new Claim(JwtRegisteredClaimNames.Sub, userId)],
+            now,
+            now.AddMinutes(3),
+            signingCredentials);
+        var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
+
         var request = new HttpRequestMessage(method, uri);
-        request.Headers.Add("X-User-ID", userId);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
+        request.Options.Set(UserIdOption, userId);
         return request;
     }
 

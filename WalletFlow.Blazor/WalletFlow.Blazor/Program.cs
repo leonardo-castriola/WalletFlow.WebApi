@@ -70,6 +70,14 @@ if (!Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiBaseUri) ||
 }
 
 var apiKey = builder.Configuration["Authentication:ApiKey"];
+var jwtSigningKey = builder.Configuration["Authentication:Jwt:SigningKey"];
+var jwtIssuer = builder.Configuration["Authentication:Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Authentication:Jwt:Audience"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || System.Text.Encoding.UTF8.GetByteCount(jwtSigningKey) < 32 ||
+    string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+    throw new InvalidOperationException(
+        "Configure Authentication:Jwt:SigningKey (pelo menos 32 bytes), Authentication:Jwt:Issuer e Authentication:Jwt:Audience no host Blazor.");
+
 if (!builder.Environment.IsDevelopment())
 {
     if (string.IsNullOrWhiteSpace(apiKey))

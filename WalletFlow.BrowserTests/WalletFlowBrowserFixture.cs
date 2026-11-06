@@ -58,6 +58,7 @@ public sealed class WalletFlowBrowserFixture : IAsyncLifetime
         startInfo.ArgumentList.Add("--urls");
         startInfo.ArgumentList.Add(BaseAddress.TrimEnd('/'));
         startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+        startInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
         startInfo.Environment["ASPNETCORE_URLS"] = BaseAddress.TrimEnd('/');
         startInfo.Environment["ConnectionStrings__DefaultConnection"] =
             $"Data Source={Path.Combine(_temporaryDirectory, "WalletFlow.BrowserTests.db")}";
