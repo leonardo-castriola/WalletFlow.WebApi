@@ -1,0 +1,17 @@
+.theme-toggle {
+    align-items: center;
+    background: var(--wf-surface, #fff);
+    border: 1px solid var(--wf-line, #e4e7ec);
+    border-radius: 999px;
+    color: var(--wf-ink, #172033);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 1.1rem;
+    height: 2.35rem;
+    justify-content: center;
+    margin-left: 1rem;
+    width: 2.35rem;
+}
+.theme-toggle:hover { border-color: var(--wf-primary, #2563eb); color: var(--wf-primary, #2563eb); }
+.theme-toggle:focus-visible { outline: 3px solid rgb(37 99 235 / 40%); outline-offset: 2px; }
+.theme-toggle-anonymous { margin-left: 0; position: fixed; right: 1.25rem; top: 1.25rem; z-index: 20; }

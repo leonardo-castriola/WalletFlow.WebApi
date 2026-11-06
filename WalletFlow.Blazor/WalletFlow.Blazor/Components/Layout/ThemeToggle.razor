@@ -1,0 +1,10 @@
+@using Microsoft.AspNetCore.Components
+
+<button class="theme-toggle @Class" type="button" data-theme-toggle aria-label="Ativar tema escuro" title="Ativar tema escuro" aria-pressed="false">
+    <span aria-hidden="true">☾</span>
+</button>
+
+@code {
+    [Parameter]
+    public string? Class { get; set; }
+}

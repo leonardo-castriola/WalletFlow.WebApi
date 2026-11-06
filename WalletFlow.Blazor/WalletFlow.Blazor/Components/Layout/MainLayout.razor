@@ -14,9 +14,7 @@
             <Authorized>
                 <div class="top-row">
                     <span class="topbar-title">WalletFlow <span aria-hidden="true">/</span> Receitas e despesas</span>
-                    <button id="theme-toggle" class="theme-toggle" type="button" onclick="walletFlowTheme.toggle()" aria-label="Ativar tema escuro" title="Ativar tema escuro">
-                        <span aria-hidden="true">☾</span>
-                    </button>
+                    <ThemeToggle />
                 </div>
                 <div id="budget-alert-toast" class="budget-alert-toast" role="status" aria-live="polite" hidden></div>
             </Authorized>
@@ -30,9 +28,7 @@
 
 <AuthorizeView>
     <NotAuthorized>
-        <button id="theme-toggle" class="theme-toggle theme-toggle-anonymous" type="button" onclick="walletFlowTheme.toggle()" aria-label="Ativar tema escuro" title="Ativar tema escuro">
-            <span aria-hidden="true">☾</span>
-        </button>
+        <ThemeToggle Class="theme-toggle-anonymous" />
     </NotAuthorized>
 </AuthorizeView>
 

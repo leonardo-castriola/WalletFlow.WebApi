@@ -5,17 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <script>
-        (() => {
-            const cookieTheme = document.cookie.split(';').map(value => value.trim())
-                .find(value => value.startsWith('walletflow-theme='))?.split('=')[1];
-            let storedTheme = cookieTheme;
-            if (storedTheme !== 'dark' && storedTheme !== 'light') {
-                try { storedTheme = localStorage.getItem('walletflow-theme'); } catch { }
-            }
-            document.documentElement.dataset.theme = storedTheme === 'dark' ? 'dark' : 'light';
-        })();
-    </script>
+    <script src="@Assets["theme.js"]"></script>
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
@@ -33,7 +23,6 @@
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["password-visibility.js"]"></script>
-    <script src="@Assets["theme.js"]"></script>
     <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@10.0.0/dist/browser/signalr.min.js"></script>
     <script src="@Assets["budget-alerts.js"]"></script>
 </body>

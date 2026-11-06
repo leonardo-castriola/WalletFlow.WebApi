@@ -312,6 +312,36 @@ html[data-theme="dark"] .btn-primary {
     --bs-btn-color: #fff;
 }
 
+/* Contraste dos botões secundários e controles Bootstrap no tema escuro. */
+html[data-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #d5deeb;
+    --bs-btn-border-color: #53627a;
+    --bs-btn-hover-bg: #2b3950;
+    --bs-btn-hover-border-color: #71829b;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: #344155;
+    --bs-btn-active-border-color: #71829b;
+    --bs-btn-active-color: #fff;
+    --bs-btn-disabled-color: #8795a9;
+    --bs-btn-disabled-border-color: #46556c;
+}
+html[data-theme="dark"] .form-check-input {
+    background-color: #141f2e;
+    border-color: #64748b;
+}
+html[data-theme="dark"] .form-check-input:checked {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+html[data-theme="dark"] .form-check-input:focus {
+    border-color: #8bb4ff;
+    box-shadow: 0 0 0 .22rem rgb(139 180 255 / 24%);
+}
+html[data-theme="dark"] .text-dark,
+html[data-theme="dark"] .text-body { color: var(--wf-ink) !important; }
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-light { background-color: var(--wf-surface) !important; }
+
 /* Os rótulos SVG criados via MarkupString não recebem o atributo de CSS isolado do componente. */
 html[data-theme="dark"] .finance-chart .chart-axis-label,
 html[data-theme="dark"] .finance-chart .chart-month-label { fill: #b8c5d8; }
