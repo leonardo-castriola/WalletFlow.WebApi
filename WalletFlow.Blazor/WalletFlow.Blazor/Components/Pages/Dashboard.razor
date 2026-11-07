@@ -273,6 +273,9 @@
     private string? _erro;
     private string? _usuarioId;
     private IJSObjectReference? _dashboardModule;
+    private DotNetObjectReference<Dashboard>? _dashboardReference;
+    private int? _transactionUpdatesSubscription;
+    private readonly SemaphoreSlim _carregarSemaforo = new(1, 1);
     private List<string> _ordemGraficos = ["flow", "revenue", "expenses", "balance"];
     private static readonly string[] GraficosValidos = ["flow", "revenue", "expenses", "balance"];
 
@@ -301,6 +304,9 @@
             var salva = await _dashboardModule.InvokeAsync<string[]>("loadChartOrder");
             if (salva.Length == GraficosValidos.Length && salva.Distinct().Count() == GraficosValidos.Length && salva.All(GraficosValidos.Contains))
                 _ordemGraficos = salva.ToList();
+            _dashboardReference = DotNetObjectReference.Create(this);
+            _transactionUpdatesSubscription = await _dashboardModule.InvokeAsync<int>(
+                "subscribeToTransactionUpdates", _dashboardReference);
             StateHasChanged();
         }
         catch (JSException)
@@ -337,36 +343,56 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_dashboardModule is null) return;
-        try { await _dashboardModule.DisposeAsync(); }
+        try
+        {
+            if (_dashboardModule is not null && _transactionUpdatesSubscription is int subscriptionId)
+                await _dashboardModule.InvokeVoidAsync("unsubscribeFromTransactionUpdates", subscriptionId);
+            if (_dashboardModule is not null)
+                await _dashboardModule.DisposeAsync();
+        }
         catch (JSDisconnectedException) { }
+        finally
+        {
+            _dashboardReference?.Dispose();
+        }
     }
+
+    [JSInvokable]
+    public Task AtualizarGraficosAsync() => InvokeAsync(CarregarAsync);
 
     private async Task CarregarAsync()
     {
-        _carregando = true;
-        _erro = null;
+        await _carregarSemaforo.WaitAsync();
         try
         {
-            var saldoTask = Api.ObterSaldoAsync();
-            var extratoTask = Api.ObterTransacoesAsync(1, 5, null, null, null);
-            var evolucaoTask = Api.ObterEvolucaoMensalAsync();
-            await Task.WhenAll(saldoTask, extratoTask, evolucaoTask);
-            _saldo = await saldoTask;
-            var extrato = await extratoTask;
-            _evolucao = await evolucaoTask;
-            _totalTransacoes = extrato.TotalCount;
-            _transacoesRecentes = extrato.Items;
-        }
-        catch (HttpRequestException ex)
-        {
-            _erro = ex.StatusCode is null
-                ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
-                : ex.Message;
+            _carregando = true;
+            _erro = null;
+            try
+            {
+                var saldoTask = Api.ObterSaldoAsync();
+                var extratoTask = Api.ObterTransacoesAsync(1, 5, null, null, null);
+                var evolucaoTask = Api.ObterEvolucaoMensalAsync();
+                await Task.WhenAll(saldoTask, extratoTask, evolucaoTask);
+                _saldo = await saldoTask;
+                var extrato = await extratoTask;
+                _evolucao = await evolucaoTask;
+                _totalTransacoes = extrato.TotalCount;
+                _transacoesRecentes = extrato.Items;
+            }
+            catch (HttpRequestException ex)
+            {
+                _erro = ex.StatusCode is null
+                    ? "Não foi possível conectar à API. Confira se ela está em execução e se Api:BaseUrl está correto."
+                    : ex.Message;
+            }
+            finally
+            {
+                _carregando = false;
+            }
         }
         finally
         {
-            _carregando = false;
+            _carregarSemaforo.Release();
         }
     }
 

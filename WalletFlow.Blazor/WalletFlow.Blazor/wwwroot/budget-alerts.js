@@ -20,6 +20,10 @@
             hideTimer = setTimeout(() => { toast.hidden = true; }, 10000);
         });
 
+        connection.on('TransacoesAtualizadas', () => {
+            document.dispatchEvent(new CustomEvent('walletflow:transacoes-atualizadas'));
+        });
+
         connection.start().catch(error => console.warn('Não foi possível conectar aos alertas de orçamento em tempo real.', error));
     }
 

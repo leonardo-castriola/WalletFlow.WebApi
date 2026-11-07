@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using WalletFlow.Application.Abstractions;
 using WalletFlow.Application.DTOs;
 using WalletFlow.Domain.Entities;
@@ -9,23 +10,43 @@ using WalletFlow.Infrastructure.Persistence;
 
 namespace WalletFlow.Infrastructure.Repositories;
 
-public sealed class EfTransacaoRepository(WalletDbContext context) : ITransacaoRepository
+public sealed class EfTransacaoRepository : ITransacaoRepository
 {
-    public async Task<IReadOnlyList<ResumoMensalTransacao>> ObterResumoMensalAsync(string userId, CancellationToken cancellationToken = default) =>
-        await context.Database.SqlQueryRaw<ResumoMensalTransacao>(
-                """
-                SELECT
-                    CAST(strftime('%Y', "DataCadastro") AS INTEGER) AS "Ano",
-                    CAST(strftime('%m', "DataCadastro") AS INTEGER) AS "Mes",
-                    COALESCE(SUM(CASE WHEN "Tipo" = 1 THEN "Valor" ELSE 0 END), 0) AS "Receitas",
-                    COALESCE(SUM(CASE WHEN "Tipo" = 0 THEN "Valor" ELSE 0 END), 0) AS "Despesas"
-                FROM "Transacoes"
-                WHERE "UserId" = @userId
-                GROUP BY strftime('%Y-%m', "DataCadastro")
-                ORDER BY strftime('%Y-%m', "DataCadastro")
-                """,
-                new SqliteParameter("@userId", userId))
+    private readonly WalletDbContext context;
+    private readonly TimeZoneInfo timeZone;
+
+    public EfTransacaoRepository(WalletDbContext context, IConfiguration? configuration = null)
+    {
+        this.context = context;
+        timeZone = TimeZoneInfo.FindSystemTimeZoneById(configuration?["Filters:TimeZoneId"] ?? "America/Sao_Paulo");
+    }
+
+    public async Task<IReadOnlyList<ResumoMensalTransacao>> ObterResumoMensalAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var transacoes = await context.Transacoes.AsNoTracking()
+            .Where(transacao => transacao.UserId == userId)
+            .Select(transacao => new { transacao.DataCadastro, transacao.Tipo, transacao.Valor })
             .ToListAsync(cancellationToken);
+
+        return transacoes
+            .GroupBy(transacao =>
+            {
+                var dataLocal = TimeZoneInfo.ConvertTime(transacao.DataCadastro, timeZone);
+                return (dataLocal.Year, dataLocal.Month);
+            })
+            .Select(grupo => new ResumoMensalTransacao
+            {
+                Ano = grupo.Key.Year,
+                Mes = grupo.Key.Month,
+                Receitas = grupo.Where(transacao => transacao.Tipo == TipoTransacao.Receita).Sum(transacao => transacao.Valor),
+                Despesas = grupo.Where(transacao => transacao.Tipo == TipoTransacao.Despesa).Sum(transacao => transacao.Valor)
+            })
+            .OrderBy(resumo => resumo.Ano)
+            .ThenBy(resumo => resumo.Mes)
+            .ToList();
+    }
 
     public async Task<(IReadOnlyList<Transacao> Items, int TotalCount)> ListarAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
