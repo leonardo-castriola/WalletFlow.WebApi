@@ -206,12 +206,23 @@ public sealed class IdentityPagesBrowserTests(WalletFlowBrowserFixture fixture)
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
+        await page.RouteAsync("https://viacep.com.br/**", route => route.AbortAsync());
         await page.GotoAsync(new Uri(new Uri(fixture.BaseAddress), "criar-conta").AbsoluteUri);
 
+        await page.GetByLabel("Nome completo").FillAsync("Usuário de teste");
+        await page.Locator("#register-gender").SelectOptionAsync("Masculino");
         var email = page.GetByRole(AriaRole.Textbox, new() { Name = "E-mail", Exact = true });
         var password = page.GetByRole(AriaRole.Textbox, new() { Name = "Senha", Exact = true });
         var confirmation = page.GetByRole(AriaRole.Textbox, new() { Name = "Confirmar senha", Exact = true });
-        await email.FillAsync("browser-test@example.test");
+        await email.FillAsync($"browser-test-{Guid.NewGuid():N}@example.test");
+        await page.GetByLabel("Telefone").FillAsync("21999999999");
+        await page.GetByLabel("CPF").FillAsync("52998224725");
+        await page.GetByLabel("CEP").FillAsync("99999999");
+        await page.GetByLabel("Logradouro").FillAsync("Rua de teste");
+        await page.GetByLabel("Número").FillAsync("10");
+        await page.GetByLabel("Bairro").FillAsync("Centro");
+        await page.GetByLabel("Cidade").FillAsync("Rio de Janeiro");
+        await page.GetByLabel("Estado (UF)").FillAsync("RJ");
         await password.FillAsync("SenhaForte1234");
         await confirmation.FillAsync("SenhaForte1234");
         await page.GetByRole(AriaRole.Button, new() { Name = "Cadastrar novo usuário" }).ClickAsync();
