@@ -41,6 +41,9 @@ namespace WalletFlow.Infrastructure.Persistence
                 .Property(item => item.Limite)
                 .HasPrecision(11, 2);
             builder.Entity<OrcamentoMensal>()
+                .Property(item => item.Percentual)
+                .HasPrecision(5, 2);
+            builder.Entity<OrcamentoMensal>()
                 .HasOne<WalletUser>()
                 .WithMany()
                 .HasForeignKey(item => item.UserId)

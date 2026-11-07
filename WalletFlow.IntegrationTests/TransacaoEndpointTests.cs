@@ -218,7 +218,7 @@ public sealed class TransacaoEndpointTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OrcamentoIsolaUsuariosValidaEntradasEEmiteAlertaDeOitentaPorCentoUmaUnicaVez()
+    public async Task OrcamentoIsolaUsuariosValidaEntradasEEmiteAlertaAoAtingirLimiteUmaUnicaVez()
     {
         UsarUsuario("usuario-1");
         var fuso = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
@@ -237,19 +237,19 @@ public sealed class TransacaoEndpointTests : IAsyncLifetime
         using var abaixoDoLimite = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
         Assert.Equal(HttpStatusCode.NoContent, abaixoDoLimite.StatusCode);
 
-        await CriarTransacaoAsync("Despesa no limite", 1m, TipoTransacao.Despesa);
+        await CriarTransacaoAsync("Despesa no limite", 21m, TipoTransacao.Despesa);
         using var alerta = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
         Assert.Equal(HttpStatusCode.OK, alerta.StatusCode);
         var dadosAlerta = await alerta.Content.ReadFromJsonAsync<AlertaOrcamentoDto>();
         Assert.NotNull(dadosAlerta);
-        Assert.Equal(80m, dadosAlerta.PercentualUtilizado);
+        Assert.Equal(100m, dadosAlerta.PercentualUtilizado);
         using var alertaRepetido = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
         Assert.Equal(HttpStatusCode.NoContent, alertaRepetido.StatusCode);
 
         using var consultaDoDono = await _client.GetAsync($"/api/Orcamento?ano={ano}&mes={mes}");
         var orcamentoDoDono = await consultaDoDono.Content.ReadFromJsonAsync<OrcamentoMensalDto>();
         Assert.NotNull(orcamentoDoDono);
-        Assert.Equal(80m, orcamentoDoDono.Despesas);
+        Assert.Equal(100m, orcamentoDoDono.Despesas);
         Assert.True(orcamentoDoDono.AlertaEnviado);
 
         UsarUsuario("usuario-2");

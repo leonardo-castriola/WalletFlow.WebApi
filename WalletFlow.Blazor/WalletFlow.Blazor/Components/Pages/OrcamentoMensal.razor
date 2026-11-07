@@ -48,6 +48,13 @@
     else
     {
         <EditForm class="budget-form" Model="this" OnValidSubmit="SalvarAsync" FormName="monthly-budget">
+                    @if (_orcamento?.ConfiguracaoHerdada == true)
+                    {
+                        <p class="budget-threshold-note">
+                            Configuração de @NomeDoMes(_orcamento.MesConfiguracaoOrigem ?? _mes) de @_orcamento.AnoConfiguracaoOrigem aplicada automaticamente a este mês.
+                            O cálculo usa a receita e as despesas do período selecionado. Salve apenas se quiser personalizar este mês.
+                        </p>
+                    }
                     <div class="budget-mode-field">
                         <label class="form-label" for="budget-mode">Definir limite por</label>
                         <InputSelect id="budget-mode" class="form-select" @bind-Value="_modo">
@@ -59,7 +66,7 @@
                         @if (_modo == "percentual")
                         {
                             <label class="form-label" for="budget-percent">Percentual da receita (%)</label>
-                            <InputNumber id="budget-percent" class="form-control" @bind-Value="_percentual" min="0.01" max="100" step="0.1" />
+                            <InputNumber id="budget-percent" class="form-control" @bind-Value="_percentual" min="0.01" max="100" step="0.01" />
                         }
                         else
                         {
@@ -99,17 +106,27 @@
                     <span>de @_orcamento.Limite.ToString("C", Cultura)</span>
                 </div>
                 <div class="progress budget-progress" role="progressbar" aria-label="Percentual do orçamento utilizado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@progress.ToString(CultureInfo.InvariantCulture)">
-                    <div class="progress-bar @(progress >= 80 ? "budget-progress-warning" : null)" style="width: @progress.ToString(CultureInfo.InvariantCulture)%"></div>
+                <div class="progress-bar @(progress >= 100 ? "budget-progress-warning" : null)" style="width: @progress.ToString(CultureInfo.InvariantCulture)%"></div>
                 </div>
                 <p class="budget-usage">@_orcamento.PercentualUtilizado.ToString("N1", Cultura)% utilizado</p>
                 @if (_orcamento.PercentualUtilizado >= 80)
                 {
-                    <p class="budget-threshold-note" role="status">Você atingiu 80% do limite deste mês. O alerta em tempo real já foi sinalizado.</p>
+                    <p class="budget-threshold-note" role="status">Você atingiu ou ultrapassou o limite deste mês. O alerta em tempo real já foi sinalizado.</p>
                 }
                 else
                 {
-                    <p class="budget-threshold-note">Um alerta será exibido em tempo real quando as despesas atingirem 80% do limite.</p>
+                    <p class="budget-threshold-note">Um alerta será exibido em tempo real e enviado por e-mail quando as despesas atingirem o limite.</p>
                 }
+            </div>
+        }
+        else if (_orcamento is not null && _orcamento.Modo == "percentual" && _orcamento.Percentual is not null)
+        {
+            <div class="budget-summary">
+                <p class="budget-usage">
+                    @(_orcamento.ConfiguracaoHerdada ? "Percentual aplicado automaticamente:" : "Configuração salva:")
+                    @_orcamento.Percentual.Value.ToString("N2", Cultura)% da receita.
+                </p>
+                <p class="budget-threshold-note">O limite e o acompanhamento das despesas serão calculados quando houver receita registrada neste mês.</p>
             </div>
         }
         else if (_orcamento is not null)
@@ -161,6 +178,8 @@
         {
             _orcamento = await Api.ObterOrcamentoMensalAsync(_ano, _mes);
             _limite = _orcamento.Limite;
+            _modo = _orcamento.Modo;
+            _percentual = _orcamento.Percentual ?? 50m;
             var inicio = new DateOnly(_ano, _mes, 1);
             var fim = inicio.AddMonths(1).AddDays(-1);
             var receitas = await Api.ObterTodasTransacoesAsync(TipoTransacao.Receita, inicio, fim);
@@ -189,14 +208,12 @@
                 return;
             }
             var limiteFinal = _modo == "percentual" ? LimitePercentual : _limite;
-            if (limiteFinal <= 0)
+            if (_modo != "percentual" && limiteFinal <= 0)
             {
-                _erro = _modo == "percentual"
-                    ? "Não é possível salvar o percentual sem receitas registradas neste mês."
-                    : "Informe um limite maior que zero.";
+                _erro = "Informe um limite maior que zero.";
                 return;
             }
-            _orcamento = await Api.SalvarOrcamentoMensalAsync(_ano, _mes, limiteFinal);
+            _orcamento = await Api.SalvarOrcamentoMensalAsync(_ano, _mes, _modo, limiteFinal, _modo == "percentual" ? _percentual : null);
             _limite = limiteFinal;
             _mensagem = "Limite mensal salvo com sucesso.";
         }

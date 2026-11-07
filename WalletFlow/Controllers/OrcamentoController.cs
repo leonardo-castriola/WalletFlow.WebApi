@@ -36,7 +36,7 @@ public sealed class OrcamentoController(IOrcamentoMensalService orcamentos) : Co
             return BadRequest("Informe um mês e ano válidos.");
         try
         {
-            return Ok(await orcamentos.SalvarAsync(CurrentUserId, ano, mes, dto.Limite, cancellationToken));
+            return Ok(await orcamentos.SalvarAsync(CurrentUserId, ano, mes, dto, cancellationToken));
         }
         catch (ArgumentOutOfRangeException ex)
         {

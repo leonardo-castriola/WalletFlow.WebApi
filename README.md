@@ -22,8 +22,8 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Envio do extrato filtrado por período ao endereço de e-mail da própria conta, como PDF anexado com todos os lançamentos e seus totais.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
 - Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
-- Orçamento total de despesas configurável por usuário e por mês, definido por valor em reais ou por percentual das receitas registradas no mês, com visualização do limite equivalente, acompanhamento do valor gasto e percentual utilizado.
-- Alerta em tempo real via SignalR quando as despesas mensais atingem 80% do limite; o envio fica registrado para evitar avisos repetidos no mesmo mês.
+- Orçamento de despesas configurável por usuário e mês, definido por valor em reais ou por percentual da receita daquele período. Meses sem configuração própria reaproveitam automaticamente a configuração do mês configurado mais recente; percentuais são recalculados com a receita do mês selecionado.
+- Alertas por SignalR e por e-mail quando as despesas atingem ou ultrapassam 100% do limite mensal. Cada usuário recebe no máximo um alerta por mês; uma configuração alterada pode habilitar um novo alerta para aquele período.
 - Tooltips individuais nos pontos dos gráficos para consultar os valores de cada série e mês; valores e percentuais das receitas e despesas também ficam disponíveis junto às visualizações.
 - Controles para mover os gráficos para cima ou para baixo no painel, com a ordem escolhida salva no navegador.
 - Tema claro e escuro selecionável, com preferência persistente e sincronizada entre as páginas, inclusive antes e depois do login.
@@ -197,9 +197,16 @@ O cliente Blazor envia a identidade autenticada automaticamente por JWT. A API r
 | `GET` | `/api/Transacao/evolucao-mensal?ano=2026&mes=11` | Retorna os totais mensais dos últimos seis meses para os gráficos do painel |
 | `GET` | `/api/Orcamento?ano=2026&mes=11` | Consulta limite, despesas e percentual utilizado no mês |
 | `PUT` | `/api/Orcamento?ano=2026&mes=11` | Cria ou atualiza o limite mensal de despesas |
-| `POST` | `/api/Orcamento/verificar-alerta?ano=2026&mes=11` | Registra e retorna o alerta de 80% apenas uma vez por mês |
+| `POST` | `/api/Orcamento/verificar-alerta?ano=2026&mes=11` | Verifica se as despesas atingiram o limite mensal e registra o alerta apenas uma vez por mês |
 | `POST` | `/api/Transacao/importacao/previa` | Analisa arquivo OFX/CSV (multipart, campo `arquivo`) e retorna prévia e duplicatas |
 | `POST` | `/api/Transacao/importacao` | Grava os lançamentos selecionados após revisão, ignorando duplicatas revalidadas |
+
+O corpo de `PUT /api/Orcamento` aceita orçamento em reais ou percentual da receita:
+
+```json
+{ "limite": 5200.00, "modo": "valor" }
+{ "limite": 0, "modo": "percentual", "percentual": 70 }
+```
 
 ### Interface Blazor
 
@@ -212,7 +219,7 @@ O cliente Blazor envia a identidade autenticada automaticamente por JWT. A API r
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
 | Painel financeiro | `/painel` | Consultar saldo e movimentações recentes, visualizar gráficos dos últimos seis meses e personalizar sua ordem de apresentação |
-| Orçamento mensal | `/orcamento` | Definir limite de despesas para cada mês e acompanhar o progresso até o alerta de 80% |
+| Orçamento mensal | `/orcamento` | Definir limite por valor ou percentual, reutilizar a última configuração em meses sem ajuste próprio e acompanhar despesas até o limite |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
 | Editar transação | `/transacoes/editar/{id}` | Atualizar descrição, valor e tipo de uma transação própria |
@@ -220,7 +227,9 @@ O cliente Blazor envia a identidade autenticada automaticamente por JWT. A API r
 
 Na importação CSV, use cabeçalhos `Data`, `Descrição` e `Valor`; `Tipo` é opcional quando o valor tiver sinal. São reconhecidos separadores por vírgula, ponto e vírgula e tabulação; valores decimais podem usar vírgula ou ponto. Para identificar duplicatas, o sistema compara data, tipo, valor e descrição normalizada. O arquivo pode ter até 5 MB e 500 lançamentos válidos por importação; linhas inválidas aparecem na revisão e não são gravadas. A data do lançamento importado é preservada no extrato.
 
-O orçamento é geral para todas as despesas da conta no mês selecionado. A apuração respeita `Filters:TimeZoneId` (padrão `America/Sao_Paulo`). O alerta em tempo real usa uma conexão SignalR autenticada pelo cookie do Blazor e é emitido ao salvar ou alterar transações pela interface; um único alerta fica registrado para cada usuário e mês.
+O orçamento é geral para todas as despesas da conta no mês selecionado. A apuração respeita `Filters:TimeZoneId` (padrão `America/Sao_Paulo`). Ao consultar um mês sem configuração própria, o sistema aplica a configuração do mês configurado mais recente: valores fixos são reaproveitados e percentuais são recalculados com a receita daquele mês. Salvar no mês selecionado cria ou atualiza uma configuração específica para ele.
+
+Quando as despesas alcançam ou ultrapassam 100% do limite, o sistema envia um alerta SignalR para as sessões conectadas do usuário e tenta enviar um e-mail ao endereço cadastrado. O alerta é processado uma vez por usuário e mês. O envio de e-mail requer SMTP funcional; falhas são registradas no log do servidor e não desfazem a movimentação financeira.
 
 Na criação da conta e na tela “Meu cadastro”, a consulta do CEP usa o serviço público [ViaCEP](https://viacep.com.br/) para localizar logradouro, bairro, cidade e UF. O CEP é enviado ao serviço quando os oito dígitos são informados; confira os dados retornados e preencha o número e o complemento. Se a consulta falhar ou o CEP não for encontrado, os campos podem ser preenchidos manualmente. O PDF enviado por e-mail inclui os dados de identificação e endereço do titular.
 
@@ -256,7 +265,7 @@ As imagens abaixo foram capturadas na interface Swagger local, com a aplicação
 
 ## Testes
 
-Os testes xUnit cobrem regras unitárias, comportamento da API e integração ponta a ponta entre endpoints e persistência. A suíte unitária verifica importação OFX/CSV, valores e datas, classificação por sinal, erros por linha e detecção de duplicatas no mesmo arquivo. A suíte de integração usa `WebApplicationFactory` e um banco SQLite temporário isolado, sem acessar o banco de desenvolvimento, para verificar duplicatas contra o histórico e entre contas, confirmação sem relançar duplicatas, autenticação/autorização, isolamento de orçamento, validação do período e do limite e alerta de 80% emitido uma única vez.
+Os testes xUnit cobrem regras unitárias, comportamento da API e integração ponta a ponta entre endpoints e persistência. A suíte unitária verifica importação OFX/CSV, valores e datas, classificação por sinal, erros por linha e detecção de duplicatas no mesmo arquivo. A suíte de integração usa `WebApplicationFactory` e um banco SQLite temporário isolado, sem acessar o banco de desenvolvimento, para verificar duplicatas contra o histórico e entre contas, confirmação sem relançar duplicatas, autenticação/autorização, isolamento de orçamento, validação do período e do limite e registro de alerta ao atingir o limite mensal.
 
 ```bash
 dotnet test WalletFlow.WebApi.slnx
@@ -273,6 +282,10 @@ dotnet user-secrets set "Reports:Monthly:Enabled" "true" --project WalletFlow/Wa
 ```
 
 A API e o host Blazor compartilham o mesmo `UserSecretsId` local, então as credenciais SMTP já configuradas para o Blazor também ficam disponíveis para a API. Em produção, configure `Reports__Monthly__Enabled=true` e as variáveis `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__Username`, `Email__Smtp__Password` e `Email__Smtp__From` no ambiente do servidor.
+
+## Alertas de orçamento por e-mail
+
+Além do resumo mensal, a API tenta enviar uma notificação quando as despesas de um usuário atingem ou ultrapassam o limite configurado para o mês. O cálculo usa o valor em reais ou o limite derivado do percentual da receita. O alerta por e-mail é processado uma vez no mês e usa as mesmas credenciais SMTP descritas acima; a interface também exibe a notificação em tempo real via SignalR quando o usuário está conectado.
 
 ## Como contribuir
 

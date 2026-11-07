@@ -7,5 +7,7 @@ public sealed class OrcamentoMensal
     public int Ano { get; set; }
     public int Mes { get; set; }
     public decimal Limite { get; set; }
-    public DateTimeOffset? AlertaOitentaPorcentoEnviadoEmUtc { get; set; }
+    public string Modo { get; set; } = "valor";
+    public decimal? Percentual { get; set; }
+    public DateTimeOffset? AlertaLimiteAtingidoEmUtc { get; set; }
 }

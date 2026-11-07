@@ -180,10 +180,10 @@ public sealed class TransacaoApiClient(
             ?? throw new InvalidOperationException("A API não retornou os dados do orçamento.");
     }
 
-    public async Task<OrcamentoMensalDto> SalvarOrcamentoMensalAsync(int ano, int mes, decimal limite, CancellationToken cancellationToken = default)
+    public async Task<OrcamentoMensalDto> SalvarOrcamentoMensalAsync(int ano, int mes, string modo, decimal limite, decimal? percentual = null, CancellationToken cancellationToken = default)
     {
         using var request = await CreateAuthenticatedRequestAsync(HttpMethod.Put, $"api/Orcamento?ano={ano}&mes={mes}", cancellationToken);
-        request.Content = JsonContent.Create(new AtualizarOrcamentoMensalDto(limite));
+        request.Content = JsonContent.Create(new AtualizarOrcamentoMensalDto(limite, modo, percentual));
         using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
         var saved = await response.Content.ReadFromJsonAsync<OrcamentoMensalDto>(cancellationToken: cancellationToken)

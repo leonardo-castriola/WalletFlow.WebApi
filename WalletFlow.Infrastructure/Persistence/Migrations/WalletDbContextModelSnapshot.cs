@@ -207,7 +207,7 @@ namespace WalletFlow.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTimeOffset?>("AlertaOitentaPorcentoEnviadoEmUtc")
+                    b.Property<DateTimeOffset?>("AlertaLimiteAtingidoEmUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Ano")
@@ -215,6 +215,14 @@ namespace WalletFlow.Migrations
 
                     b.Property<decimal>("Limite")
                         .HasPrecision(11, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Modo")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Percentual")
+                        .HasPrecision(5, 2)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Mes")
