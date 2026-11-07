@@ -98,6 +98,7 @@ public sealed class TransacaoApiClient(
         var criada = await response.Content.ReadFromJsonAsync<TransacaoRespostaDto>(
                    cancellationToken: cancellationToken)
                ?? throw new InvalidOperationException("A API não retornou a transação criada.");
+        await NotificarTransacoesAtualizadasAsync(UserIdDaRequisicao(request), cancellationToken);
         await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
         return criada;
     }
@@ -126,6 +127,7 @@ public sealed class TransacaoApiClient(
         request.Content = JsonContent.Create(transacao);
         using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
+        await NotificarTransacoesAtualizadasAsync(UserIdDaRequisicao(request), cancellationToken);
         await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
     }
 
@@ -135,6 +137,7 @@ public sealed class TransacaoApiClient(
             HttpMethod.Delete, $"api/Transacao/{id.ToString(CultureInfo.InvariantCulture)}", cancellationToken);
         using var response = await httpClient.SendAsync(request, cancellationToken);
         await GarantirSucessoAsync(response, cancellationToken);
+        await NotificarTransacoesAtualizadasAsync(UserIdDaRequisicao(request), cancellationToken);
         await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
     }
 
@@ -167,6 +170,8 @@ public sealed class TransacaoApiClient(
         await GarantirSucessoImportacaoAsync(response, cancellationToken);
         var resultado = await response.Content.ReadFromJsonAsync<ExtratoImportacaoResultadoDto>(cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException("A API não retornou o resultado da importação.");
+        if (resultado.Importados > 0)
+            await NotificarTransacoesAtualizadasAsync(UserIdDaRequisicao(request), cancellationToken);
         await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
         return resultado;
     }
@@ -190,6 +195,19 @@ public sealed class TransacaoApiClient(
             ?? throw new InvalidOperationException("A API não retornou o orçamento salvo.");
         await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
         return saved;
+    }
+
+    private async Task NotificarTransacoesAtualizadasAsync(string userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await alertHub.Clients.Group(BudgetAlertsHub.GroupName(userId))
+                .SendAsync("TransacoesAtualizadas", cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Falha ao publicar a atualização de movimentações; a operação financeira foi concluída.");
+        }
     }
 
     private async Task VerificarEPublicarAlertaAsync(string userId, CancellationToken cancellationToken)

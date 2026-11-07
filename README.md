@@ -22,6 +22,8 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Envio do extrato filtrado por período ao endereço de e-mail da própria conta, como PDF anexado com todos os lançamentos e seus totais.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
 - Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
+- Atualização automática dos dados e gráficos do painel após criar, editar, excluir ou importar movimentações, inclusive em outras sessões conectadas; a atualização é propagada em tempo real por SignalR.
+- Agrupamento mensal dos gráficos conforme o fuso da carteira (`Filters:TimeZoneId`, padrão `America/Sao_Paulo`), para que lançamentos próximos à virada do mês sejam contabilizados no período local correto.
 - Orçamento de despesas configurável por usuário e mês, definido por valor em reais ou por percentual da receita daquele período. Meses sem configuração própria reaproveitam automaticamente a configuração do mês configurado mais recente; percentuais são recalculados com a receita do mês selecionado.
 - Alertas por SignalR e por e-mail quando as despesas atingem ou ultrapassam 100% do limite mensal. Cada usuário recebe no máximo um alerta por mês; uma configuração alterada pode habilitar um novo alerta para aquele período.
 - Tooltips individuais nos pontos dos gráficos para consultar os valores de cada série e mês; valores e percentuais das receitas e despesas também ficam disponíveis junto às visualizações.
@@ -102,7 +104,7 @@ dotnet run --project WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.cspro
 
 Abra o frontend em [http://localhost:5087](http://localhost:5087). Após entrar, o sistema abre a página inicial autenticada (`/inicio`), com atalhos para o painel financeiro e o extrato. O Swagger da API fica em [http://localhost:5250/swagger](http://localhost:5250/swagger).
 
-Os filtros de data do extrato consideram o fuso configurado em `Filters:TimeZoneId` no servidor Blazor. O padrão incluído é `America/Sao_Paulo`; ajuste esse valor para o fuso da carteira quando necessário. Valores monetários aceitam até duas casas decimais.
+Os filtros de data do extrato e o agrupamento mensal dos gráficos consideram o fuso configurado em `Filters:TimeZoneId`. O padrão incluído é `America/Sao_Paulo`; ajuste esse valor para o fuso da carteira quando necessário. Valores monetários aceitam até duas casas decimais.
 
 No Visual Studio, também é possível iniciar API e frontend simultaneamente usando a configuração `WalletFlow.WebApi.slnLaunch`.
 
@@ -218,7 +220,7 @@ O corpo de `PUT /api/Orcamento` aceita orçamento em reais ou percentual da rece
 | Recuperar senha | `/esqueci-a-senha` | Solicitar link de redefinição por e-mail |
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
-| Painel financeiro | `/painel` | Consultar saldo e movimentações recentes, visualizar gráficos dos últimos seis meses e personalizar sua ordem de apresentação |
+| Painel financeiro | `/painel` | Consultar saldo e movimentações recentes, visualizar gráficos dos últimos seis meses atualizados automaticamente após alterações financeiras e personalizar sua ordem de apresentação |
 | Orçamento mensal | `/orcamento` | Definir limite por valor ou percentual, reutilizar a última configuração em meses sem ajuste próprio e acompanhar despesas até o limite |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
