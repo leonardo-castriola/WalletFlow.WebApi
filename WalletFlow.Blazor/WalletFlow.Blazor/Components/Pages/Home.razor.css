@@ -28,7 +28,8 @@
     margin-bottom: 1.5rem;
     width: 4.5rem;
 }
-.welcome-page h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 780; max-width: 720px; }
+.welcome-page h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 780; max-width: 900px; }
+.welcome-greeting-line { display: block; }
 .welcome-copy { color: var(--wf-muted); font-size: clamp(1rem, 2vw, 1.15rem); margin: .75rem 0 1.75rem; max-width: 620px; }
 .welcome-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; }
 .welcome-hint { align-items: center; color: var(--wf-muted); display: flex; font-size: .86rem; gap: .55rem; margin-top: 2.25rem; }

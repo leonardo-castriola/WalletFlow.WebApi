@@ -8,6 +8,9 @@ public sealed class WalletUser : IdentityUser
     [PersonalData, MaxLength(120)]
     public string? NomeCompleto { get; set; }
 
+    [PersonalData, MaxLength(16)]
+    public string? Genero { get; set; }
+
     [PersonalData, MaxLength(11)]
     public string? Cpf { get; set; }
 

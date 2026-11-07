@@ -5,13 +5,10 @@
 @using WalletFlow.Blazor.DTOs
 @using WalletFlow.Blazor.Services
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Identity
 @using System.Security.Claims
-@using WalletFlow.Infrastructure.Persistence
 @inject TransacaoApiClient Api
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject UserManager<WalletUser> UserManager
 @inject IJSRuntime JS
 
 <PageTitle>Painel financeiro | WalletFlow</PageTitle>
@@ -19,8 +16,8 @@
 <div class="dashboard-header">
     <div>
         <p class="eyebrow">CONTROLE FINANCEIRO</p>
-        <h1>@(_nomeBoasVindas is null ? "Seja bem-vindo(a) ao seu fluxo de carteira." : $"Olá, {_nomeBoasVindas}! Seja bem-vindo(a) ao seu fluxo de carteira.")</h1>
-        <p class="text-secondary">Seu dinheiro organizado em um só lugar.</p>
+        <h1>Visão geral das suas finanças</h1>
+        <p class="text-secondary">Acompanhe seu saldo e a movimentação do seu dinheiro.</p>
     </div>
     <button class="btn btn-primary" @onclick="CarregarAsync" disabled="@_carregando">Atualizar</button>
 </div>
@@ -275,7 +272,6 @@
     private bool _carregando = true;
     private string? _erro;
     private string? _usuarioId;
-    private string? _nomeBoasVindas;
     private IJSObjectReference? _dashboardModule;
     private List<string> _ordemGraficos = ["flow", "revenue", "expenses", "balance"];
     private static readonly string[] GraficosValidos = ["flow", "revenue", "expenses", "balance"];
@@ -289,13 +285,6 @@
             _erro = "Não foi possível identificar a sessão autenticada.";
             _carregando = false;
             return;
-        }
-
-        var usuario = await UserManager.FindByIdAsync(_usuarioId);
-        if (!string.IsNullOrWhiteSpace(usuario?.NomeCompleto))
-        {
-            var partesNome = usuario.NomeCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            _nomeBoasVindas = partesNome.Length > 1 ? $"{partesNome[0]} {partesNome[^1]}" : partesNome[0];
         }
 
         // O cliente de API envia a identidade como JWT assinado pelo canal servidor-a-servidor;

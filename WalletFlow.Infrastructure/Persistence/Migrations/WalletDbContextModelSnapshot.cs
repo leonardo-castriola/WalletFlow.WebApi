@@ -266,6 +266,10 @@ namespace WalletFlow.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Genero")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("NomeCompleto")
                         .HasMaxLength(120)
                         .HasColumnType("TEXT");

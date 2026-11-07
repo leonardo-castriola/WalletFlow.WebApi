@@ -19,20 +19,35 @@
 </div>
 
 <section class="panel budget-panel" aria-labelledby="budget-heading">
-    <div class="budget-config-grid">
-        <div class="budget-config-main">
-            <div class="budget-heading">
-                <p class="eyebrow">LIMITE DE DESPESAS</p>
-                <h2 id="budget-heading">@NomeDoMes(_mes) de @_ano</h2>
+    <div class="budget-toolbar">
+        <div class="budget-heading">
+            <p class="eyebrow">LIMITE DE DESPESAS</p>
+            <h2 id="budget-heading">@NomeDoMes(_mes) de @_ano</h2>
+        </div>
+        <div class="budget-period" aria-label="Período do orçamento">
+            <div class="budget-period-field">
+                <label for="budget-month">Mês</label>
+                <InputSelect id="budget-month" class="form-select" @bind-Value="_mes" @bind:after="CarregarAsync">
+                    @for (var month = 1; month <= 12; month++)
+                    {
+                        <option value="@month">@NomeDoMes(month)</option>
+                    }
+                </InputSelect>
             </div>
+            <div class="budget-period-field budget-year-field">
+                <label for="budget-year">Ano</label>
+                <InputNumber id="budget-year" class="form-control" @bind-Value="_ano" @bind:after="CarregarAsync" />
+            </div>
+        </div>
+    </div>
 
-            @if (_carregando)
-            {
-                <p class="text-secondary" role="status">Carregando orçamento...</p>
-            }
-            else
-            {
-                <EditForm class="budget-form" Model="this" OnValidSubmit="SalvarAsync" FormName="monthly-budget">
+    @if (_carregando)
+    {
+        <p class="text-secondary" role="status">Carregando orçamento...</p>
+    }
+    else
+    {
+        <EditForm class="budget-form" Model="this" OnValidSubmit="SalvarAsync" FormName="monthly-budget">
                     <div class="budget-mode-field">
                         <label class="form-label" for="budget-mode">Definir limite por</label>
                         <InputSelect id="budget-mode" class="form-select" @bind-Value="_modo">
@@ -69,26 +84,8 @@
                     <button class="btn btn-primary budget-save-button" type="submit" disabled="@_salvando">
                         @(_salvando ? "Salvando..." : "Salvar limite")
                     </button>
-                </EditForm>
-            }
-        </div>
-
-        <div class="budget-period" aria-label="Período do orçamento">
-            <div class="budget-period-field">
-                <label for="budget-month">Mês</label>
-                <InputSelect id="budget-month" class="form-select" @bind-Value="_mes" @bind:after="CarregarAsync">
-                    @for (var month = 1; month <= 12; month++)
-                    {
-                        <option value="@month">@NomeDoMes(month)</option>
-                    }
-                </InputSelect>
-            </div>
-            <div class="budget-period-field budget-year-field">
-                <label for="budget-year">Ano</label>
-                <InputNumber id="budget-year" class="form-control" @bind-Value="_ano" @bind:after="CarregarAsync" />
-            </div>
-        </div>
-    </div>
+        </EditForm>
+    }
 
     @if (!_carregando)
     {
@@ -213,5 +210,5 @@
         }
     }
 
-    private static string NomeDoMes(int mes) => Cultura.DateTimeFormat.GetMonthName(mes);
+    private static string NomeDoMes(int mes) => Cultura.TextInfo.ToTitleCase(Cultura.DateTimeFormat.GetMonthName(mes));
 }

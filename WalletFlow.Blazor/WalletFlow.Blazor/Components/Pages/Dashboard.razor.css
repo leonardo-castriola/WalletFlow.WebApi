@@ -90,3 +90,4 @@
     .welcome-panel { align-items: flex-start; flex-direction: column; }
     .quick-actions { width: 100%; }
 }
+.dashboard-greeting .welcome-greeting-line { display: block; }

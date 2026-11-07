@@ -32,7 +32,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Middleware global que registra exceções no servidor e responde com um erro seguro.
 - Autenticação por chave de API fora do ambiente de desenvolvimento.
 - Documentação interativa pelo Swagger em desenvolvimento.
-- Interface web Blazor com página inicial, painel de saldo, extrato e cadastro de transações integrado à API.
+- Interface web Blazor com página inicial autenticada, painel financeiro, extrato e cadastro de transações integrado à API. Após o login, o usuário é direcionado à página inicial (`/inicio`), que oferece atalhos para o painel e o extrato.
 - Tela de login responsiva na rota `/`, com validação, alternância de visibilidade da senha e atalhos para cadastro e recuperação.
 - Cadastro sem confirmação por e-mail, recuperação de senha por link enviado ao e-mail e proteção das rotas financeiras pelo ASP.NET Core Identity.
 - Cadastro e atualização do perfil com nome completo, telefone, CPF e endereço; ao informar um CEP com oito dígitos, a tela consulta o ViaCEP e preenche logradouro, bairro, cidade e UF para conferência.
@@ -100,7 +100,7 @@ dotnet run --project WalletFlow/WalletFlow.csproj --launch-profile http
 dotnet run --project WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.csproj --launch-profile http
 ```
 
-Abra o frontend em [http://localhost:5087](http://localhost:5087). A página inicial oferece links para o painel financeiro, o extrato e o cadastro. O Swagger da API fica em [http://localhost:5250/swagger](http://localhost:5250/swagger).
+Abra o frontend em [http://localhost:5087](http://localhost:5087). Após entrar, o sistema abre a página inicial autenticada (`/inicio`), com atalhos para o painel financeiro e o extrato. O Swagger da API fica em [http://localhost:5250/swagger](http://localhost:5250/swagger).
 
 Os filtros de data do extrato consideram o fuso configurado em `Filters:TimeZoneId` no servidor Blazor. O padrão incluído é `America/Sao_Paulo`; ajuste esse valor para o fuso da carteira quando necessário. Valores monetários aceitam até duas casas decimais.
 

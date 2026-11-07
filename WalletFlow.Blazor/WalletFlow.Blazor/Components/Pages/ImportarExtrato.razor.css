@@ -2,6 +2,7 @@
 .file-format-badge { background: #eef4ff; border-radius: 999px; color: #2459d3; font-size: .78rem; font-weight: 700; padding: .45rem .75rem; white-space: nowrap; }
 .import-dropzone { align-items: center; background: #f8faff; border: 1px dashed #a9bce8; border-radius: var(--wf-radius-sm); cursor: pointer; display: flex; flex-direction: column; gap: .55rem; min-height: 190px; padding: 2rem 1rem; position: relative; text-align: center; }
 .import-dropzone:hover, .import-dropzone:focus-within { background: #f1f6ff; border-color: #3267e8; }
+.import-dropzone.is-dragging { background: #e9f0ff; border: 2px dashed #2459d3; box-shadow: 0 0 0 .2rem rgb(36 89 211 / 12%); }
 .import-dropzone strong { color: var(--wf-ink); }
 .import-dropzone > span:last-of-type { color: var(--wf-muted); font-size: .84rem; max-width: 650px; }
 .import-dropzone input { cursor: pointer; height: 100%; inset: 0; opacity: 0; position: absolute; width: 100%; z-index: 2; }

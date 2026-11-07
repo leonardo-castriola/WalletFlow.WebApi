@@ -11,14 +11,13 @@
 <section class="welcome-page">
     <div class="welcome-mark" aria-hidden="true">WF</div>
     <p class="eyebrow">FLUXO DE CARTEIRA</p>
-    @if (!string.IsNullOrWhiteSpace(_nomeExibicao))
-    {
-        <h1>Olá, @_nomeExibicao! Seja bem-vindo(a) ao seu fluxo de carteira.</h1>
-    }
-    else
-    {
-        <h1>Seja bem-vindo(a) ao seu fluxo de carteira.</h1>
-    }
+    <h1>
+        @if (!string.IsNullOrWhiteSpace(_nomeExibicao))
+        {
+            <span class="welcome-greeting-line">Olá, @_nomeExibicao!</span>
+        }
+        <span class="welcome-greeting-line">@TextoBoasVindas</span>
+    </h1>
     <p class="welcome-copy">Acesse o menu para conferir o saldo ou adicionar novas movimentações.</p>
 
     <div class="welcome-actions">
@@ -34,11 +33,19 @@
 
 @code {
     private string? _nomeExibicao;
+    private string? _genero;
+    private string TextoBoasVindas => _genero switch
+    {
+        "Masculino" => "Seja bem-vindo ao seu fluxo de carteira.",
+        "Feminino" => "Seja bem-vinda ao seu fluxo de carteira.",
+        _ => "Boas-vindas ao seu fluxo de carteira."
+    };
 
     protected override async Task OnInitializedAsync()
     {
         var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
         var user = await UserManager.GetUserAsync(principal);
+        _genero = user?.Genero;
         if (string.IsNullOrWhiteSpace(user?.NomeCompleto)) return;
 
         var partes = user.NomeCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

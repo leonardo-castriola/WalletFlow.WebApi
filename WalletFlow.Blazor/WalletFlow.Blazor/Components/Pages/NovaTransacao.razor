@@ -1,5 +1,6 @@
 @page "/transacoes/nova"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using WalletFlow.Blazor.DTOs
 @using WalletFlow.Blazor.Enums
@@ -10,50 +11,57 @@
 <PageTitle>Nova transação | WalletFlow</PageTitle>
 
 <div class="dashboard-header">
-    <div><p class="eyebrow">MOVIMENTAÇÃO FINANCEIRA</p><h1>Nova transação</h1><p class="text-secondary">Registre uma receita ou despesa na sua carteira.</p></div>
+    <div>
+        <p class="eyebrow">MOVIMENTAÇÃO FINANCEIRA</p>
+        <h1>Nova transação</h1>
+        <p class="text-secondary">Registre uma receita ou despesa na sua carteira.</p>
+    </div>
     <a class="btn btn-outline-secondary" href="/transacoes">Voltar ao extrato</a>
 </div>
 
-<section class="panel form-panel">
-    @if (!string.IsNullOrWhiteSpace(_erro)) { <div class="alert alert-danger" role="alert">@_erro</div> }
-    <div class="@(!string.IsNullOrWhiteSpace(_mensagemSucesso) ? "alert alert-success alert-dismissible success-message" : "d-none")" role="status" aria-live="polite">
-        <span>@_mensagemSucesso</span>
-        <EditForm Model="_controleFormulario" FormName="fechar-sucesso" Enhance OnValidSubmit="FecharMensagemSucesso">
-            @if (!string.IsNullOrWhiteSpace(_mensagemSucesso))
-            {
-                <button type="submit" class="btn-close" aria-label="Fechar mensagem"></button>
-            }
-        </EditForm>
+<section class="panel transaction-panel" aria-labelledby="transaction-heading">
+    <div class="transaction-heading">
+        <p class="eyebrow">DADOS DA MOVIMENTAÇÃO</p>
+        <h2 id="transaction-heading">Detalhes da transação</h2>
     </div>
+    @if (!string.IsNullOrWhiteSpace(_erro))
+    {
+        <div class="alert alert-danger" role="alert">@_erro</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(_mensagemSucesso))
+    {
+        <div class="alert alert-success alert-dismissible success-message" role="status" aria-live="polite">
+            <span>@_mensagemSucesso</span>
+            <button type="button" class="btn-close" aria-label="Fechar mensagem" @onclick="FecharMensagemSucesso"></button>
+        </div>
+    }
     <EditForm @key="_modelo" Model="_modelo" FormName="cadastro-transacao" Enhance OnValidSubmit="SalvarAsync">
         <DataAnnotationsValidator />
         <ValidationSummary class="validation-summary" />
-        <div class="mb-3">
-            <label class="form-label" for="descricao">Descrição</label>
-            <InputText id="descricao" class="form-control" @bind-Value="_modelo!.Descricao" maxlength="100" placeholder="Ex.: conta de luz, salário" disabled="@_salvo" />
-            <ValidationMessage For="@(() => _modelo!.Descricao)" />
+        <div class="transaction-fields">
+            <div class="transaction-field">
+                <label class="form-label" for="descricao">Descrição</label>
+                <InputText id="descricao" class="form-control" @bind-Value="_modelo!.Descricao" maxlength="100" placeholder="Ex.: conta de luz, salário" disabled="@_salvo" />
+                <ValidationMessage For="@(() => _modelo!.Descricao)" />
+            </div>
+            <div class="transaction-field">
+                <label class="form-label" for="valor">Valor</label>
+                <InputNumber id="valor" class="form-control" @bind-Value="_modelo!.Valor" min="0.01" max="99999999.99" step="0.01" disabled="@_salvo" />
+                <ValidationMessage For="@(() => _modelo!.Valor)" />
+            </div>
+            <div class="transaction-field">
+                <label class="form-label" for="tipo">Tipo</label>
+                <InputSelect id="tipo" class="form-select" @bind-Value="_modelo!.Tipo" disabled="@_salvo">
+                    <option value="">Selecione o tipo</option>
+                    <option value="0">Despesa</option>
+                    <option value="1">Receita</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => _modelo!.Tipo)" />
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label" for="valor">Valor</label>
-            <InputNumber id="valor" class="form-control" @bind-Value="_modelo!.Valor" min="0.01" max="99999999.99" step="0.01" disabled="@_salvo" />
-            <ValidationMessage For="@(() => _modelo!.Valor)" />
-        </div>
-        <div class="mb-4">
-            <label class="form-label" for="tipo">Tipo</label>
-            <InputSelect id="tipo" class="form-select" @bind-Value="_modelo!.Tipo" disabled="@_salvo">
-                <option value="">Selecione o tipo</option>
-                <option value="0">Despesa</option>
-                <option value="1">Receita</option>
-            </InputSelect>
-            <ValidationMessage For="@(() => _modelo!.Tipo)" />
-        </div>
-        <div class="form-actions">
+        <div class="form-actions transaction-actions">
             <button type="submit" class="btn btn-primary" disabled="@(_salvando || _salvo)">@(_salvando ? "Salvando..." : "Salvar transação")</button>
-        </div>
-    </EditForm>
-    <EditForm Model="_controleFormulario" FormName="cancelar-transacao" Enhance OnValidSubmit="Cancelar">
-        <div class="form-cancel-actions">
-            <button type="submit" class="btn btn-outline-secondary" disabled="@_salvando">Cancelar</button>
+            <button type="button" class="btn btn-outline-secondary" disabled="@_salvando" @onclick="Cancelar">Cancelar</button>
         </div>
     </EditForm>
 </section>
@@ -62,7 +70,6 @@
     [SupplyParameterFromForm(FormName = "cadastro-transacao")]
     private TransacaoCriacaoDto? _modelo { get; set; }
 
-    private readonly FormAction _controleFormulario = new();
     private string? _erro;
     private string? _mensagemSucesso;
     private bool _salvando;
@@ -113,6 +120,4 @@
     }
 
     private void FecharMensagemSucesso() => Cancelar();
-
-    private sealed class FormAction { }
 }

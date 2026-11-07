@@ -39,6 +39,17 @@
                     <ValidationMessage For="@(() => _model!.NomeCompleto)" />
                 </div>
                 <div class="identity-field">
+                    <label for="register-gender">Gênero</label>
+                    <InputSelect id="register-gender" class="identity-input" @bind-Value="_model!.Genero">
+                        <option value="">Selecione</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
+                        <option value="Neutro">Não binário / prefiro não informar</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => _model!.Genero)" />
+                    <small>Usaremos essa informação para flexionar a saudação.</small>
+                </div>
+                <div class="identity-field">
                     <label for="register-email">E-mail</label>
                     <InputText id="register-email" class="identity-input" type="email" autocomplete="email" @bind-Value="_model!.Email" />
                     <ValidationMessage For="@(() => _model!.Email)" />
@@ -115,6 +126,7 @@
             Email = model.Email.Trim(),
             EmailConfirmed = true,
             NomeCompleto = model.NomeCompleto.Trim(),
+            Genero = model.Genero,
             PhoneNumber = model.Telefone.Trim(),
             Cpf = SomenteDigitos(model.Cpf),
             EnderecoCep = SomenteDigitos(model.Cep),
@@ -147,6 +159,10 @@
         [Required(ErrorMessage = "Informe seu nome completo.")]
         [StringLength(120, ErrorMessage = "O nome deve ter até 120 caracteres.")]
         public string NomeCompleto { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Selecione uma opção de gênero para a saudação.")]
+        [RegularExpression("^(Masculino|Feminino|Neutro)$", ErrorMessage = "Selecione uma opção válida.")]
+        public string Genero { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe seu e-mail.")]
         [EmailAddress(ErrorMessage = "Informe um endereço de e-mail válido.")]

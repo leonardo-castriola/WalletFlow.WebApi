@@ -29,15 +29,16 @@
             <ValidationSummary />
             <div class="profile-fields">
                 <div><label class="form-label" for="profile-name">Nome completo</label><InputText id="profile-name" class="form-control" autocomplete="name" maxlength="120" @bind-Value="_model.NomeCompleto" /><ValidationMessage For="@(() => _model.NomeCompleto)" /></div>
+                <div><label class="form-label" for="profile-gender">Gênero</label><InputSelect id="profile-gender" class="form-select" @bind-Value="_model.Genero"><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Neutro">Não binário / prefiro não informar</option></InputSelect><ValidationMessage For="@(() => _model.Genero)" /><small class="form-text">Usaremos essa informação para flexionar a saudação.</small></div>
                 <div><label class="form-label" for="profile-phone">Telefone</label><InputText id="profile-phone" class="form-control" type="tel" autocomplete="tel" placeholder="(21) 99999-9999" @bind-Value="_model.Telefone" /><ValidationMessage For="@(() => _model.Telefone)" /></div>
                 <div><label class="form-label" for="profile-cpf">CPF</label><InputText id="profile-cpf" class="form-control" autocomplete="off" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" @bind-Value="_model.Cpf" /><ValidationMessage For="@(() => _model.Cpf)" /></div>
                 <div><label class="form-label" for="profile-cep">CEP</label><InputText id="profile-cep" class="form-control" autocomplete="postal-code" inputmode="numeric" maxlength="9" placeholder="00000-000" @bind-Value="_model.Cep" /><ValidationMessage For="@(() => _model.Cep)" /><small id="profile-cep-status" role="status" aria-live="polite" class="form-text">Digite o CEP para preencher o endereço automaticamente.</small></div>
+                <div><label class="form-label" for="profile-state">Estado (UF)</label><InputText id="profile-state" class="form-control" autocomplete="address-level1" maxlength="2" placeholder="RJ" @bind-Value="_model.Estado" /><ValidationMessage For="@(() => _model.Estado)" /></div>
                 <div class="profile-full"><label class="form-label" for="profile-street">Logradouro</label><InputText id="profile-street" class="form-control" autocomplete="address-line1" maxlength="160" @bind-Value="_model.Logradouro" /><ValidationMessage For="@(() => _model.Logradouro)" /></div>
                 <div><label class="form-label" for="profile-number">Número</label><InputText id="profile-number" class="form-control" maxlength="30" @bind-Value="_model.Numero" /><ValidationMessage For="@(() => _model.Numero)" /></div>
                 <div><label class="form-label" for="profile-complement">Complemento <span class="text-secondary">(opcional)</span></label><InputText id="profile-complement" class="form-control" autocomplete="address-line2" maxlength="100" @bind-Value="_model.Complemento" /></div>
                 <div><label class="form-label" for="profile-neighborhood">Bairro</label><InputText id="profile-neighborhood" class="form-control" autocomplete="address-level3" maxlength="100" @bind-Value="_model.Bairro" /><ValidationMessage For="@(() => _model.Bairro)" /></div>
                 <div><label class="form-label" for="profile-city">Cidade</label><InputText id="profile-city" class="form-control" autocomplete="address-level2" maxlength="100" @bind-Value="_model.Cidade" /><ValidationMessage For="@(() => _model.Cidade)" /></div>
-                <div><label class="form-label" for="profile-state">Estado (UF)</label><InputText id="profile-state" class="form-control" autocomplete="address-level1" maxlength="2" placeholder="RJ" @bind-Value="_model.Estado" /><ValidationMessage For="@(() => _model.Estado)" /></div>
             </div>
             <button class="btn btn-primary" type="submit" disabled="@_salvando">@(_salvando ? "Salvando..." : "Salvar cadastro")</button>
         </EditForm>
@@ -64,6 +65,7 @@
         else
         {
             _model.NomeCompleto = user.NomeCompleto ?? string.Empty;
+            _model.Genero = user.Genero ?? "Neutro";
             _model.Telefone = user.PhoneNumber ?? string.Empty;
             _model.Cpf = user.Cpf ?? string.Empty;
             _model.Cep = user.EnderecoCep ?? string.Empty;
@@ -87,6 +89,7 @@
             if (user is null) { _erro = "Não foi possível localizar esta conta. Entre novamente e tente outra vez."; return; }
 
             user.NomeCompleto = _model.NomeCompleto.Trim();
+            user.Genero = _model.Genero;
             user.PhoneNumber = _model.Telefone.Trim();
             user.Cpf = SomenteDigitos(_model.Cpf);
             user.EnderecoCep = SomenteDigitos(_model.Cep);
@@ -111,6 +114,9 @@
         [Required(ErrorMessage = "Informe seu nome completo.")]
         [StringLength(120)]
         public string NomeCompleto { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Selecione uma opção de gênero para a saudação.")]
+        [RegularExpression("^(Masculino|Feminino|Neutro)$", ErrorMessage = "Selecione uma opção válida.")]
+        public string Genero { get; set; } = "Neutro";
         [Required(ErrorMessage = "Informe seu telefone.")]
         [Phone(ErrorMessage = "Informe um telefone válido com DDD.")]
         public string Telefone { get; set; } = string.Empty;

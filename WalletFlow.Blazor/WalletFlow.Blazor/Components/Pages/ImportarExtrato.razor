@@ -1,12 +1,14 @@
 @page "/transacoes/importar"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @using System.Globalization
 @using WalletFlow.Blazor.DTOs
 @using WalletFlow.Blazor.Enums
 @using WalletFlow.Blazor.Services
 @inject TransacaoApiClient Api
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Importar extrato | WalletFlow</PageTitle>
 
@@ -33,7 +35,7 @@
         <div><p class="eyebrow">1. ENVIE SEU ARQUIVO</p><h2>Extrato bancário</h2></div>
         <span class="file-format-badge">OFX ou CSV · até 5 MB</span>
     </div>
-    <label class="import-dropzone" for="statement-file">
+    <label class="import-dropzone" for="statement-file" data-import-dropzone>
         <span class="import-file-icon" aria-hidden="true">↑</span>
         <strong>@(_arquivo?.Name ?? "Escolha um extrato para analisar")</strong>
         <span>Arraste o arquivo para esta área ou selecione-o. CSV: colunas Data, Descrição e Valor; Tipo é opcional. OFX é lido automaticamente.</span>
@@ -126,6 +128,25 @@
     private bool _processando;
     private string? _erro;
     private string? _mensagem;
+    private IJSObjectReference? _dropzoneModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _dropzoneModule = await JS.InvokeAsync<IJSObjectReference>("import", "./import-dropzone.js");
+        await _dropzoneModule.InvokeVoidAsync("initialize", "statement-file");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_dropzoneModule is null) return;
+
+        try { await _dropzoneModule.InvokeVoidAsync("dispose", "statement-file"); }
+        catch (JSDisconnectedException) { }
+
+        await _dropzoneModule.DisposeAsync();
+    }
 
     private void ArquivoSelecionado(InputFileChangeEventArgs args)
     {
@@ -134,6 +155,15 @@
         _previa = null;
         _selecionados.Clear();
         _arquivo = args.File;
+        var extensao = Path.GetExtension(_arquivo.Name);
+        if (!string.Equals(extensao, ".ofx", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(extensao, ".csv", StringComparison.OrdinalIgnoreCase))
+        {
+            _erro = "Formato não suportado. Selecione um arquivo .OFX ou .CSV.";
+            _arquivo = null;
+            return;
+        }
+
         if (_arquivo.Size > TamanhoMaximoArquivo)
         {
             _erro = "O arquivo excede o limite de 5 MB.";

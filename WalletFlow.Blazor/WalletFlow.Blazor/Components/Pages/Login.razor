@@ -84,7 +84,7 @@
         _model ??= new();
         var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (state.User.Identity?.IsAuthenticated == true)
-            Navigation.NavigateTo("/painel", forceLoad: true);
+            Navigation.NavigateTo("/inicio", forceLoad: true);
     }
 
     private async Task HandleLogin()
@@ -95,7 +95,7 @@
 
         if (result.Succeeded)
         {
-            Navigation.NavigateTo("/painel", forceLoad: true);
+            Navigation.NavigateTo("/inicio", forceLoad: true);
             return;
         }
 
