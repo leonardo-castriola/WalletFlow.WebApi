@@ -256,7 +256,7 @@ As imagens abaixo foram capturadas na interface Swagger local, com a aplicação
 
 ## Testes
 
-Os testes xUnit cobrem regras unitárias, comportamento da API e integração ponta a ponta entre endpoints e persistência. Os testes de integração usam `WebApplicationFactory` e um banco SQLite temporário isolado, sem acessar o banco de desenvolvimento.
+Os testes xUnit cobrem regras unitárias, comportamento da API e integração ponta a ponta entre endpoints e persistência. A suíte unitária verifica importação OFX/CSV, valores e datas, classificação por sinal, erros por linha e detecção de duplicatas no mesmo arquivo. A suíte de integração usa `WebApplicationFactory` e um banco SQLite temporário isolado, sem acessar o banco de desenvolvimento, para verificar duplicatas contra o histórico e entre contas, confirmação sem relançar duplicatas, autenticação/autorização, isolamento de orçamento, validação do período e do limite e alerta de 80% emitido uma única vez.
 
 ```bash
 dotnet test WalletFlow.WebApi.slnx
