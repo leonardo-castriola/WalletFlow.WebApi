@@ -51,10 +51,10 @@
             </div>
             <div class="transaction-field">
                 <label class="form-label" for="tipo">Tipo</label>
-                <InputSelect id="tipo" class="form-select" @bind-Value="_modelo!.Tipo" disabled="@_salvo">
-                    <option value="">Selecione o tipo</option>
-                    <option value="0">Despesa</option>
-                    <option value="1">Receita</option>
+                <InputSelect TValue="TipoTransacao?" id="tipo" class="form-select" @bind-Value="_modelo!.Tipo" disabled="@_salvo">
+                    <option value="">Selecione receita ou despesa</option>
+                    <option value="@TipoTransacao.Despesa">Despesa</option>
+                    <option value="@TipoTransacao.Receita">Receita</option>
                 </InputSelect>
                 <ValidationMessage For="@(() => _modelo!.Tipo)" />
             </div>
