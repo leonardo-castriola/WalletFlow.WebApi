@@ -183,6 +183,36 @@ dotnet run --project WalletFlow/WalletFlow.csproj --no-launch-profile
 
 Configure as duas variáveis de autenticação no host Blazor e na API. O host envia `X-API-Key` e `Authorization: Bearer` apenas em chamadas servidor-a-servidor. Não coloque nenhuma dessas chaves no cliente ou no navegador.
 
+## Implantação em produção
+
+O projeto ainda precisa de configuração da plataforma e de alguns ajustes antes de atender usuários com dados reais. Os valores de exemplo acima não devem ser usados como segredos. Configure os serviços com `ASPNETCORE_ENVIRONMENT=Production`, HTTPS e um gerenciador de segredos da hospedagem. API e Blazor precisam receber a mesma `Authentication__ApiKey` e `Authentication__Jwt__SigningKey`; defina também `Api__BaseUrl`, `Identity__PublicBaseUrl` e as configurações SMTP descritas acima. O Blazor exige que suas URLs públicas usem HTTPS. A porta SMTP deve ser válida para o provedor; o remetente deve estar autorizado por ele.
+
+### Banco e migrações
+
+API e Blazor usam o mesmo `WalletDbContext` para transações e Identity. SQLite pode ser mantido para uma implantação pequena, desde que os dois serviços tenham acesso ao mesmo arquivo em armazenamento persistente, com permissões de leitura e gravação. Não use disco efêmero nem execute múltiplas instâncias da aplicação apontando para um arquivo SQLite compartilhado. Para separar ou escalar os serviços, migre para um banco gerenciado e adapte as consultas específicas de SQLite (`julianday` e `INSERT OR IGNORE`).
+
+Atualmente, os dois hosts aplicam migrações durante a inicialização. Evite iniciá-los simultaneamente quando compartilham o banco: isso pode causar bloqueio no SQLite. Antes da publicação, escolha um único executor de migrações ou mova a aplicação delas para uma etapa controlada do processo de implantação. Planeje cópias de segurança e teste a restauração do banco.
+
+### Proteções e operação ainda necessárias
+
+- Persistir as chaves do ASP.NET Core Data Protection em armazenamento durável, compartilhado entre instâncias quando aplicável. Sem isso, reinicializações podem invalidar cookies de sessão e tokens de recuperação de senha.
+- Se houver proxy reverso ou terminação TLS fora do processo .NET, configurar cabeçalhos encaminhados somente para proxies confiáveis e validar o fluxo de HTTPS e cookies no endereço público.
+- Adicionar limitação de requisições aos fluxos de login, cadastro e recuperação de senha, protegendo também o serviço SMTP contra abuso.
+- Substituir `AllowedHosts: "*"` pelos domínios efetivamente usados em produção.
+- Criar endpoints de saúde para disponibilidade e prontidão, incluindo verificação do banco, e conectá-los ao monitoramento da hospedagem.
+- Adicionar automação de CI/CD para restaurar, compilar, executar todos os testes e gerar os artefatos da API e do Blazor. O repositório não inclui atualmente um Dockerfile nem um workflow de publicação.
+
+O gráfico de evolução agrupa os dados após carregar as transações do usuário; para contas com histórico grande, filtre a janela do relatório diretamente na consulta ao banco, mantendo o cálculo do saldo acumulado anterior. Antes de trocar SQLite por outro provedor, adapte e valide as consultas SQL específicas de SQLite usadas pelos repositórios e relatórios.
+
+### Checklist de liberação
+
+1. Configure segredos e URLs reais no ambiente de hospedagem; confirme que nenhuma chave ou senha foi incluída no repositório ou no artefato.
+2. Configure armazenamento persistente para o banco e para as chaves de Data Protection; confirme que API e Blazor acessam o mesmo banco.
+3. Execute migrações de forma controlada, sem inicialização concorrente dos dois serviços sobre SQLite.
+4. Execute `dotnet build WalletFlow.WebApi.slnx` e `dotnet test WalletFlow.WebApi.slnx`; publique somente com compilação e testes aprovados. Os testes de navegador dependem do Google Chrome instalado.
+5. Faça uma implantação de homologação em HTTPS e verifique cadastro, login, recuperação de senha, operações financeiras, importação de extrato, orçamento, e-mail, SignalR e persistência após reiniciar os serviços.
+6. Confirme que a licença Community do QuestPDF atende ao uso pretendido e que há monitoramento, cópia de segurança e procedimento de restauração.
+
 ## Como usar
 
 O cliente Blazor envia a identidade autenticada automaticamente por JWT. A API rejeita chamadas que tentem definir o usuário por `X-User-ID`; em produção também exige `X-API-Key`. Não exponha o segredo de assinatura ou a chave de serviço em clientes públicos. O campo `tipo` usa `0` para despesa e `1` para receita.
