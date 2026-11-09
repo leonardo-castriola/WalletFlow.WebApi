@@ -1,0 +1,187 @@
+services:
+  reverse-proxy:
+    image: caddy:2-alpine
+    container_name: walletflow-proxy
+    restart: unless-stopped
+    depends_on:
+      walletflow-api:
+        condition: service_healthy
+      walletflow-blazor:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      BLAZOR_DOMAIN: "${BLAZOR_DOMAIN:?Defina BLAZOR_DOMAIN no arquivo .env}"
+      API_DOMAIN: "${API_DOMAIN:?Defina API_DOMAIN no arquivo .env}"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      walletflow-net:
+        ipv4_address: 172.28.0.10
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  walletflow-pre-migrate-backup:
+    image: alpine:3.21
+    container_name: walletflow-pre-migrate-backup
+    restart: "no"
+    environment:
+      DATA_DIR: "/data"
+      BACKUP_DIR: "/backups"
+      BACKUP_OFFSITE_DIR: "/backups-offsite"
+      BACKUP_OFFSITE_CMD: "${BACKUP_OFFSITE_CMD:-}"
+      BACKUP_ENCRYPTION_KEY: "${BACKUP_ENCRYPTION_KEY:?Defina BACKUP_ENCRYPTION_KEY no arquivo .env}"
+      BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-30}"
+    volumes:
+      - walletflow-data:/data:ro
+      - ${BACKUP_HOST_PATH:-./backups}:/backups
+      - ${BACKUP_OFFSITE_PATH:-./backups-offsite}:/backups-offsite
+      - ./scripts:/scripts:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        apk add --no-cache sqlite tar openssl coreutils >/dev/null &&
+        /bin/sh /scripts/backup-sqlite.sh --pre-migrate
+    networks:
+      - walletflow-net
+
+  walletflow-api:
+    build:
+      context: .
+      dockerfile: WalletFlow/Dockerfile
+    container_name: walletflow-api
+    restart: unless-stopped
+    depends_on:
+      walletflow-pre-migrate-backup:
+        condition: service_completed_successfully
+    expose:
+      - "8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ForwardedHeaders__KnownProxies__0: "172.28.0.10"
+      ConnectionStrings__DefaultConnection: "Data Source=/data/Wallet.db"
+      Database__AutoMigrate: "true"
+      Backup__Directory: "/backups"
+      Backup__EncryptionKey: "${BACKUP_ENCRYPTION_KEY:?Defina BACKUP_ENCRYPTION_KEY no arquivo .env}"
+      Authentication__ApiKey: "${AUTHENTICATION_API_KEY:?Defina AUTHENTICATION_API_KEY no arquivo .env}"
+      Authentication__Jwt__SigningKey: "${AUTHENTICATION_JWT_SIGNING_KEY:?Defina AUTHENTICATION_JWT_SIGNING_KEY (min. 32 bytes) no arquivo .env}"
+      Authentication__Jwt__Issuer: "${AUTHENTICATION_JWT_ISSUER:-WalletFlow}"
+      Authentication__Jwt__Audience: "${AUTHENTICATION_JWT_AUDIENCE:-WalletFlow.Api}"
+      Email__Smtp__Host: "${EMAIL_SMTP_HOST:?Defina EMAIL_SMTP_HOST no arquivo .env}"
+      Email__Smtp__Port: "${EMAIL_SMTP_PORT:-587}"
+      Email__Smtp__ImplicitTls: "${EMAIL_SMTP_IMPLICIT_TLS:-false}"
+      Email__Smtp__Username: "${EMAIL_SMTP_USERNAME:?Defina EMAIL_SMTP_USERNAME no arquivo .env}"
+      Email__Smtp__Password: "${EMAIL_SMTP_PASSWORD:?Defina EMAIL_SMTP_PASSWORD no arquivo .env}"
+      Email__Smtp__From: "${EMAIL_SMTP_FROM:?Defina EMAIL_SMTP_FROM no arquivo .env}"
+      Reports__Monthly__Enabled: "${REPORTS_MONTHLY_ENABLED:-true}"
+      Reports__Monthly__TimeZoneId: "${TIMEZONE_ID:-America/Sao_Paulo}"
+      Filters__TimeZoneId: "${TIMEZONE_ID:-America/Sao_Paulo}"
+      AllowedHosts: "${API_DOMAIN:?Defina API_DOMAIN no arquivo .env}"
+    volumes:
+      - walletflow-data:/data
+      - ${BACKUP_HOST_PATH:-./backups}:/backups
+    networks:
+      - walletflow-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  walletflow-blazor:
+    build:
+      context: .
+      dockerfile: WalletFlow.Blazor/Dockerfile
+    container_name: walletflow-blazor
+    restart: unless-stopped
+    depends_on:
+      walletflow-api:
+        condition: service_healthy
+    expose:
+      - "8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ForwardedHeaders__KnownProxies__0: "172.28.0.10"
+      ConnectionStrings__DefaultConnection: "Data Source=/data/Wallet.db"
+      Database__AutoMigrate: "false"
+      DataProtection__KeysDirectory: "/data/dpkeys"
+      Identity__RequireConfirmedEmail: "${IDENTITY_REQUIRE_CONFIRMED_EMAIL:-true}"
+      Api__BaseUrl: "https://${API_DOMAIN:?Defina API_DOMAIN no arquivo .env}/"
+      Identity__PublicBaseUrl: "https://${BLAZOR_DOMAIN:?Defina BLAZOR_DOMAIN no arquivo .env}/"
+      Authentication__ApiKey: "${AUTHENTICATION_API_KEY:?Defina AUTHENTICATION_API_KEY no arquivo .env}"
+      Authentication__Jwt__SigningKey: "${AUTHENTICATION_JWT_SIGNING_KEY:?Defina AUTHENTICATION_JWT_SIGNING_KEY (min. 32 bytes) no arquivo .env}"
+      Authentication__Jwt__Issuer: "${AUTHENTICATION_JWT_ISSUER:-WalletFlow}"
+      Authentication__Jwt__Audience: "${AUTHENTICATION_JWT_AUDIENCE:-WalletFlow.Api}"
+      Email__Smtp__Host: "${EMAIL_SMTP_HOST:?Defina EMAIL_SMTP_HOST no arquivo .env}"
+      Email__Smtp__Port: "${EMAIL_SMTP_PORT:-587}"
+      Email__Smtp__ImplicitTls: "${EMAIL_SMTP_IMPLICIT_TLS:-false}"
+      Email__Smtp__Username: "${EMAIL_SMTP_USERNAME:?Defina EMAIL_SMTP_USERNAME no arquivo .env}"
+      Email__Smtp__Password: "${EMAIL_SMTP_PASSWORD:?Defina EMAIL_SMTP_PASSWORD no arquivo .env}"
+      Email__Smtp__From: "${EMAIL_SMTP_FROM:?Defina EMAIL_SMTP_FROM no arquivo .env}"
+      Filters__TimeZoneId: "${TIMEZONE_ID:-America/Sao_Paulo}"
+      AllowedHosts: "${BLAZOR_DOMAIN:?Defina BLAZOR_DOMAIN no arquivo .env}"
+    volumes:
+      - walletflow-data:/data
+    networks:
+      - walletflow-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  walletflow-backup:
+    image: alpine:3.21
+    container_name: walletflow-backup
+    restart: unless-stopped
+    depends_on:
+      walletflow-api:
+        condition: service_healthy
+    environment:
+      DATA_DIR: "/data"
+      BACKUP_DIR: "/backups"
+      BACKUP_OFFSITE_DIR: "/backups-offsite"
+      BACKUP_OFFSITE_CMD: "${BACKUP_OFFSITE_CMD:-}"
+      BACKUP_ENCRYPTION_KEY: "${BACKUP_ENCRYPTION_KEY:?Defina BACKUP_ENCRYPTION_KEY no arquivo .env}"
+      BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-30}"
+      BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
+    volumes:
+      - walletflow-data:/data:ro
+      - ${BACKUP_HOST_PATH:-./backups}:/backups
+      - ${BACKUP_OFFSITE_PATH:-./backups-offsite}:/backups-offsite
+      - ./scripts:/scripts:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        apk add --no-cache sqlite tar openssl coreutils >/dev/null &&
+        while true; do
+          /bin/sh /scripts/backup-sqlite.sh
+          sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"
+        done
+    networks:
+      - walletflow-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  walletflow-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+volumes:
+  walletflow-data:
+  caddy-data:
+  caddy-config:

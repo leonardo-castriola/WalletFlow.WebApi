@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.JSInterop;
 using WalletFlow.Blazor.Components.Layout;
 using WalletFlow.Blazor.DTOs;
 using WalletFlow.Blazor.Enums;
@@ -22,6 +23,7 @@ public sealed class TransacaoApiClient(
     IConfiguration configuration,
     AuthenticationStateProvider authenticationStateProvider,
     IHubContext<BudgetAlertsHub> alertHub,
+    IJSRuntime jsRuntime,
     ILogger<TransacaoApiClient> logger)
 {
     private static readonly HttpRequestOptionsKey<string> UserIdOption = new("WalletFlow.UserId");
@@ -172,7 +174,14 @@ public sealed class TransacaoApiClient(
             ?? throw new InvalidOperationException("A API não retornou o resultado da importação.");
         if (resultado.Importados > 0)
             await NotificarTransacoesAtualizadasAsync(UserIdDaRequisicao(request), cancellationToken);
-        await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
+        var userId = UserIdDaRequisicao(request);
+        var periodos = confirmacao.Lancamentos
+            .Select(item => TimeZoneInfo.ConvertTime(item.Data, _timeZone))
+            .Select(data => (data.Year, data.Month))
+            .Append(ObterPeriodoAtual())
+            .Distinct();
+        foreach (var (ano, mes) in periodos)
+            await VerificarEPublicarAlertaAsync(userId, ano, mes, cancellationToken);
         return resultado;
     }
 
@@ -193,8 +202,8 @@ public sealed class TransacaoApiClient(
         await GarantirSucessoAsync(response, cancellationToken);
         var saved = await response.Content.ReadFromJsonAsync<OrcamentoMensalDto>(cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException("A API não retornou o orçamento salvo.");
-        await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), cancellationToken);
-        return saved;
+        var alert = await VerificarEPublicarAlertaAsync(UserIdDaRequisicao(request), ano, mes, cancellationToken);
+        return alert is not null ? saved with { AlertaEnviado = true } : saved;
     }
 
     private async Task NotificarTransacoesAtualizadasAsync(string userId, CancellationToken cancellationToken)
@@ -210,31 +219,54 @@ public sealed class TransacaoApiClient(
         }
     }
 
-    private async Task VerificarEPublicarAlertaAsync(string userId, CancellationToken cancellationToken)
+    private (int Year, int Month) ObterPeriodoAtual()
+    {
+        var localDate = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, _timeZone);
+        return (localDate.Year, localDate.Month);
+    }
+
+    private Task<AlertaOrcamentoDto?> VerificarEPublicarAlertaAsync(string userId, CancellationToken cancellationToken)
+    {
+        var (ano, mes) = ObterPeriodoAtual();
+        return VerificarEPublicarAlertaAsync(userId, ano, mes, cancellationToken);
+    }
+
+    private async Task<AlertaOrcamentoDto?> VerificarEPublicarAlertaAsync(string userId, int ano, int mes, CancellationToken cancellationToken)
     {
         try
         {
-            var localDate = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, _timeZone);
             using var request = await CreateAuthenticatedRequestAsync(
                 HttpMethod.Post,
-                $"api/Orcamento/verificar-alerta?ano={localDate.Year}&mes={localDate.Month}",
+                $"api/Orcamento/verificar-alerta?ano={ano}&mes={mes}",
                 cancellationToken);
             using var response = await httpClient.SendAsync(request, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NoContent)
-                return;
+                return null;
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("A API não conseguiu verificar o limite do orçamento mensal ({StatusCode}).", response.StatusCode);
-                return;
+                return null;
             }
 
             var alert = await response.Content.ReadFromJsonAsync<AlertaOrcamentoDto>(cancellationToken: cancellationToken);
             if (alert is not null)
+            {
                 await alertHub.Clients.Group(BudgetAlertsHub.GroupName(userId)).SendAsync("AlertaOrcamento", alert, cancellationToken);
+                try
+                {
+                    await jsRuntime.InvokeVoidAsync("walletFlowShowBudgetAlert", cancellationToken, alert);
+                }
+                catch (Exception)
+                {
+                    // Se o circuito interativo não estiver ativo, a entrega ocorre via SignalR Hub.
+                }
+            }
+            return alert;
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Falha ao publicar o alerta de orçamento; a operação financeira foi concluída.");
+            return null;
         }
     }
 

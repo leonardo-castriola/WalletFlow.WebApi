@@ -82,15 +82,15 @@
                         var ponto = _evolucao.Meses[indice];
                         var x = 92 + indice * 118;
                         <g>
-                            <circle class="chart-point income-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Receitas))" r="5">
-                                <title>@($"{NomeMes(ponto.Mes)} · Receita: {ponto.Receitas.ToString("C", Cultura)}")</title>
-                            </circle>
-                            <circle class="chart-point expense-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Despesas))" r="5">
-                                <title>@($"{NomeMes(ponto.Mes)} · Despesa: {ponto.Despesas.ToString("C", Cultura)}")</title>
-                            </circle>
-                            <circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(YFluxo(SaldoDoMes(ponto)))" r="5">
-                                <title>@($"{NomeMes(ponto.Mes)} · Saldo do mês: {SaldoDoMes(ponto).ToString("C", Cultura)}")</title>
-                            </circle>
+                            @foreach (var grupo in ObterGruposHoverFluxo(ponto, indice, x)) { <g class="chart-hover-group"><circle class="chart-hit-target" cx="@SvgNumero(x)" cy="@SvgNumero(grupo.CentroY)" r="12" />@foreach (var m in grupo.Marcadores) { <circle class="chart-point @m.ClassePonto" cx="@SvgNumero(m.X)" cy="@SvgNumero(m.Y)" r="5" /> }<g class="chart-hover-card"><rect class="chart-hover-bg" x="@SvgNumero(grupo.CardX)" y="@SvgNumero(grupo.CardY)" width="@SvgNumero(grupo.CardWidth)" height="@SvgNumero(grupo.CardHeight)" rx="6" />@for (var i = 0; i < grupo.Marcadores.Count; i++) { var item = grupo.Marcadores[i]; var rowY = grupo.CardY + 17 + i * 16; <circle cx="@SvgNumero(grupo.CardX + 12)" cy="@SvgNumero(rowY - 4)" r="3.5" fill="@item.CorIndicador" />@((MarkupString)$"<text class=\"chart-hover-text\" x=\"{SvgNumero(grupo.CardX + 21)}\" y=\"{SvgNumero(rowY)}\">{item.TextoHover}</text>") }</g></g> }
+
+
+
+
+
+
+
+
                             <text class="chart-month-label" x="@x" y="252" text-anchor="middle">@NomeMes(ponto.Mes)</text>
                         </g>
                     }
@@ -152,7 +152,7 @@
                     @foreach (var ponto in _evolucao.Meses)
                     {
                         var alturaPercentual = AlturaDespesaPercentual(ponto.Despesas);
-                        <div class="expense-column" title="@($"{NomeMes(ponto.Mes)}: {ponto.Despesas.ToString("C", Cultura)} em despesas")">
+                        <div class="expense-column">
                             <span class="expense-amount">@ponto.Despesas.ToString("C0", Cultura)</span>
                             <div class="expense-track" aria-hidden="true">
                                 <div class="expense-bar" style="height: @($"{alturaPercentual.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}%")"></div>
@@ -202,8 +202,8 @@
                         var ponto = _evolucao.Meses[indice];
                         var x = 92 + indice * 118;
                         <g>
-                            <title>@($"{NomeMes(ponto.Mes)}: saldo {ponto.Saldo.ToString("C", Cultura)}")</title>
-                            <circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(YSaldo(ponto.Saldo))" r="5" />
+                            @{ var grupoSaldo = ObterGrupoHoverSaldo(ponto, indice, x); var rowYSaldo = grupoSaldo.CardY + 17; }
+                            <g class="chart-hover-group"><circle class="chart-hit-target" cx="@SvgNumero(x)" cy="@SvgNumero(grupoSaldo.CentroY)" r="12" /><circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(grupoSaldo.CentroY)" r="5" /><g class="chart-hover-card"><rect class="chart-hover-bg" x="@SvgNumero(grupoSaldo.CardX)" y="@SvgNumero(grupoSaldo.CardY)" width="@SvgNumero(grupoSaldo.CardWidth)" height="@SvgNumero(grupoSaldo.CardHeight)" rx="6" /><circle cx="@SvgNumero(grupoSaldo.CardX + 12)" cy="@SvgNumero(rowYSaldo - 4)" r="3.5" fill="#60a5fa" />@((MarkupString)$"<text class=\"chart-hover-text\" x=\"{SvgNumero(grupoSaldo.CardX + 21)}\" y=\"{SvgNumero(rowYSaldo)}\">{grupoSaldo.Marcadores[0].TextoHover}</text>")</g></g>
                             <text class="chart-month-label" x="@x" y="252" text-anchor="middle">@NomeMes(ponto.Mes)</text>
                         </g>
                     }
@@ -263,7 +263,7 @@
 
 @code {
     private static readonly System.Globalization.CultureInfo Cultura = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
-    private static readonly string[] CoresFatia = ["#2463eb", "#0f9f6e", "#f59e0b", "#8b5cf6", "#e34f65", "#0891b2"];
+    private static readonly string[] CoresFatia = ["#2563eb", "#eab308", "#10b981", "#9333ea", "#06b6d4", "#f97316"];
     private decimal? _saldo;
     private int? _totalTransacoes;
     private IReadOnlyList<TransacaoRespostaDto> _transacoesRecentes = [];
@@ -323,7 +323,7 @@
 
     private static string NomeGrafico(string grafico) => grafico switch
     {
-        "flow" => "Receitas, despesas e saldo",
+        "flow" => "Receitas, despesas e saldo do mês",
         "revenue" => "Receitas",
         "expenses" => "Despesas",
         "balance" => "Saldo",
@@ -410,7 +410,7 @@
             for (var indice = 0; indice < _evolucao!.Meses.Count; indice++)
             {
                 var inicio = acumulado;
-                acumulado += PercentualReceita(_evolucao.Meses[indice].Receitas);
+                acumulado = indice == _evolucao.Meses.Count - 1 ? 100d : Math.Min(100d, acumulado + PercentualReceita(_evolucao.Meses[indice].Receitas));
                 faixas.Add($"{CorFatia(indice)} {SvgNumero(inicio)}% {SvgNumero(acumulado)}%");
             }
 
@@ -457,4 +457,97 @@
     }
     private static string SvgNumero(double valor) => valor.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static string NomeMes(DateOnly mes) => mes.ToString("MMM", Cultura).TrimEnd('.');
+
+    private IReadOnlyList<GrupoHoverFluxo> ObterGruposHoverFluxo(PontoEvolucaoFinanceiraDto ponto, int indice, double x)
+    {
+        var mes = NomeMes(ponto.Mes);
+        var itens = new[]
+        {
+            new ItemHoverFluxo("income", "Receita", "income-point", "#22c55e", ponto.Receitas, x, YFluxo(ponto.Receitas), $"Receita: {ponto.Receitas.ToString("C", Cultura)}"),
+            new ItemHoverFluxo("expense", "Despesa", "expense-point", "#f87171", ponto.Despesas, x, YFluxo(ponto.Despesas), $"Despesa: {ponto.Despesas.ToString("C", Cultura)}"),
+            new ItemHoverFluxo("balance", "Saldo do mês", "balance-point", "#60a5fa", SaldoDoMes(ponto), x, YFluxo(SaldoDoMes(ponto)), $"Saldo do mês: {SaldoDoMes(ponto).ToString("C", Cultura)}")
+        }
+        .OrderBy(item => item.Y)
+        .ThenBy(item => item.Chave)
+        .ToList();
+
+        var clusters = new List<List<ItemHoverFluxo>>();
+        foreach (var item in itens)
+        {
+            if (clusters.Count == 0 || item.Y - clusters[^1][^1].Y > 14d)
+                clusters.Add([item]);
+            else
+                clusters[^1].Add(item);
+        }
+
+        var totalMeses = _evolucao!.Meses.Count;
+        var resultado = new List<GrupoHoverFluxo>(clusters.Count);
+        foreach (var cluster in clusters)
+        {
+            var ajustados = cluster;
+            if (cluster.Count == 2 && Math.Abs(cluster[0].Y - cluster[1].Y) <= 8d)
+            {
+                ajustados = [cluster[0] with { X = x - 3.5d }, cluster[1] with { X = x + 3.5d }];
+            }
+            else if (cluster.Count == 3 && cluster.Max(i => i.Y) - cluster.Min(i => i.Y) <= 12d)
+            {
+                ajustados = [cluster[0] with { X = x - 4.5d }, cluster[1] with { X = x }, cluster[2] with { X = x + 4.5d }];
+            }
+
+            var minY = ajustados.Min(i => i.Y);
+            var maxY = ajustados.Max(i => i.Y);
+            var centroY = (minY + maxY) / 2d;
+            const double cardWidth = 176d;
+            var cardHeight = 10d + ajustados.Count * 16d;
+            var cardX = indice == 0
+                ? x - 14d
+                : indice == totalMeses - 1
+                    ? x - cardWidth + 14d
+                    : x - cardWidth / 2d;
+            var cardY = minY - cardHeight - 10d >= 6d
+                ? minY - cardHeight - 10d
+                : maxY + 10d;
+            var tooltipNativo = $"{mes} · {string.Join(" | ", ajustados.Select(i => i.TextoHover))}";
+            resultado.Add(new GrupoHoverFluxo(ajustados, centroY, cardX, cardY, cardWidth, cardHeight, tooltipNativo));
+        }
+
+        return resultado;
+    }
+
+    private GrupoHoverFluxo ObterGrupoHoverSaldo(PontoEvolucaoFinanceiraDto ponto, int indice, double x)
+    {
+        var y = YSaldo(ponto.Saldo);
+        var item = new ItemHoverFluxo("balance", "Saldo acumulado", "balance-point", "#60a5fa", ponto.Saldo, x, y, $"Saldo acumulado: {ponto.Saldo.ToString("C", Cultura)}");
+        var totalMeses = _evolucao!.Meses.Count;
+        const double cardWidth = 198d;
+        const double cardHeight = 26d;
+        var cardX = indice == 0
+            ? x - 14d
+            : indice == totalMeses - 1
+                ? x - cardWidth + 14d
+                : x - cardWidth / 2d;
+        var cardY = y - cardHeight - 10d >= 6d
+            ? y - cardHeight - 10d
+            : y + 10d;
+        return new GrupoHoverFluxo([item], y, cardX, cardY, cardWidth, cardHeight, string.Empty);
+    }
+
+    private sealed record ItemHoverFluxo(
+        string Chave,
+        string Nome,
+        string ClassePonto,
+        string CorIndicador,
+        decimal Valor,
+        double X,
+        double Y,
+        string TextoHover);
+
+    private sealed record GrupoHoverFluxo(
+        IReadOnlyList<ItemHoverFluxo> Marcadores,
+        double CentroY,
+        double CardX,
+        double CardY,
+        double CardWidth,
+        double CardHeight,
+        string TooltipNativo);
 }

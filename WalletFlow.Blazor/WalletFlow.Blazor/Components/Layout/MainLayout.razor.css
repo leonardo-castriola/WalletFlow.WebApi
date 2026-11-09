@@ -129,7 +129,7 @@ main {
     position: fixed;
     right: 1.25rem;
     top: 4.5rem;
-    z-index: 30;
+    z-index: 1050;
 }
 .budget-alert-toast[hidden] { display: none; }
 article.content {

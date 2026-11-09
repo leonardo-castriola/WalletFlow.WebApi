@@ -367,3 +367,13 @@ FodyWeavers.xsd
 
 # Local .NET CLI state created for isolated builds
 .codex-dotnet-home/
+
+# Data Protection keys and backups
+**/dpkeys/
+backups/
+backups-offsite/
+
+# Environment variables with secrets
+.env
+.env.*
+!.env.example

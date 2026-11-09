@@ -20,7 +20,6 @@
   <ItemGroup>
     <ProjectReference Include="..\WalletFlow.Blazor\WalletFlow.Blazor\WalletFlow.Blazor.csproj"
                       ReferenceOutputAssembly="false"
-                      Private="false"
-                      AdditionalProperties="Configuration=Debug;UseAppHost=false" />
+                      Private="false" />
   </ItemGroup>
 </Project>

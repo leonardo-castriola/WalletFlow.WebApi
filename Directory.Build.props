@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Evita aviso NU1900 quando o build/restore executa em ambientes isolados sem internet -->
+    <NoWarn>$(NoWarn);NU1900</NoWarn>
+    <!-- Desativa a geracao do apphost.exe para evitar bloqueio (UnauthorizedAccessException) pelo OneDrive/Antivirus -->
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+</Project>

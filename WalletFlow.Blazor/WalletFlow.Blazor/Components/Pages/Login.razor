@@ -101,7 +101,9 @@
 
         _message = result.IsLockedOut
             ? "Muitas tentativas. Aguarde alguns minutos antes de tentar novamente."
-            : "E-mail ou senha inválidos.";
+            : result.IsNotAllowed
+                ? "Confirme seu endereço de e-mail pelo link enviado antes de entrar."
+                : "E-mail ou senha inválidos.";
         model.Password = string.Empty;
     }
 

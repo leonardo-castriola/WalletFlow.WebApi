@@ -35,8 +35,11 @@ public sealed class WalletFlowBrowserFixture : IAsyncLifetime
 
         var repositoryRoot = FindRepositoryRoot();
         var appProjectDirectory = Path.Combine(repositoryRoot, "WalletFlow.Blazor", "WalletFlow.Blazor");
-        const string configuration = "Debug";
-        var appAssembly = Path.Combine(appProjectDirectory, "bin", configuration, "net10.0", "WalletFlow.Blazor.dll");
+        var releaseAssembly = Path.Combine(appProjectDirectory, "bin", "Release", "net10.0", "WalletFlow.Blazor.dll");
+        var debugAssembly = Path.Combine(appProjectDirectory, "bin", "Debug", "net10.0", "WalletFlow.Blazor.dll");
+        var appAssembly = File.Exists(debugAssembly) && (!File.Exists(releaseAssembly) || File.GetLastWriteTimeUtc(debugAssembly) >= File.GetLastWriteTimeUtc(releaseAssembly))
+            ? debugAssembly
+            : releaseAssembly;
         if (!File.Exists(appAssembly))
             throw new FileNotFoundException("A aplicação Blazor não foi compilada para os testes de navegador.", appAssembly);
 
@@ -63,6 +66,7 @@ public sealed class WalletFlowBrowserFixture : IAsyncLifetime
         startInfo.Environment["ConnectionStrings__DefaultConnection"] =
             $"Data Source={Path.Combine(_temporaryDirectory, "WalletFlow.BrowserTests.db")}";
         startInfo.Environment["Api__BaseUrl"] = "http://127.0.0.1:1/";
+        startInfo.Environment["Email__Smtp__Host"] = "";
 
         _server = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         _server.OutputDataReceived += (_, eventArgs) => AddOutput(eventArgs.Data);

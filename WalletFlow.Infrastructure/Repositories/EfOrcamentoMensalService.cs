@@ -82,8 +82,7 @@ public sealed class EfOrcamentoMensalService(
         }
         else
         {
-            if (budget.Modo != modo || budget.Percentual != percentual || budget.Limite != limite)
-                budget.AlertaLimiteAtingidoEmUtc = null;
+            budget.AlertaLimiteAtingidoEmUtc = null;
             budget.Limite = limite;
             budget.Modo = modo;
             budget.Percentual = percentual;
@@ -107,7 +106,15 @@ public sealed class EfOrcamentoMensalService(
         var expenses = await ObterDespesasAsync(userId, ano, mes, cancellationToken);
         var limit = await ObterLimiteEfetivoAsync(userId, ano, mes, budget, cancellationToken);
         if (limit <= 0 || expenses < limit)
+        {
+            if (!isInherited && budget.AlertaLimiteAtingidoEmUtc is not null)
+            {
+                await context.OrcamentosMensais
+                    .Where(item => item.UserId == userId && item.Ano == ano && item.Mes == mes && item.AlertaLimiteAtingidoEmUtc != null)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.AlertaLimiteAtingidoEmUtc, (DateTimeOffset?)null), cancellationToken);
+            }
             return null;
+        }
 
         var now = DateTimeOffset.UtcNow;
         int claimed;

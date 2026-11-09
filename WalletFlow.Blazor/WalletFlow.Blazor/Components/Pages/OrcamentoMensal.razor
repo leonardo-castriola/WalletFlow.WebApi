@@ -109,7 +109,7 @@
                 <div class="progress-bar @(progress >= 100 ? "budget-progress-warning" : null)" style="width: @progress.ToString(CultureInfo.InvariantCulture)%"></div>
                 </div>
                 <p class="budget-usage">@_orcamento.PercentualUtilizado.ToString("N1", Cultura)% utilizado</p>
-                @if (_orcamento.PercentualUtilizado >= 80)
+                @if (_orcamento.Despesas >= _orcamento.Limite)
                 {
                     <p class="budget-threshold-note" role="status">Você atingiu ou ultrapassou o limite deste mês. O alerta em tempo real já foi sinalizado.</p>
                 }

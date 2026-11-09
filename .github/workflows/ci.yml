@@ -1,0 +1,42 @@
+name: CI - Build, Security Audit & Tests
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore dependencies
+        run: dotnet restore WalletFlow.WebApi.slnx
+
+      - name: NuGet Vulnerability Audit (Direct & Transitive)
+        run: |
+          OUTPUT=$(dotnet list WalletFlow.WebApi.slnx package --vulnerable --include-transitive)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -qi "has the following vulnerable packages"; then
+            echo "Pacotes vulneráveis detectados!" >&2
+            exit 1
+          fi
+
+      - name: Build Release
+        run: dotnet build WalletFlow.WebApi.slnx -c Release --no-restore -warnaserror
+
+      - name: Run Unit Tests (including WAL Encrypted Backup & Restore)
+        run: dotnet test WalletFlow.Tests/WalletFlow.Tests.csproj -c Release --no-build --verbosity normal
+
+      - name: Run Integration Tests
+        run: dotnet test WalletFlow.IntegrationTests/WalletFlow.IntegrationTests.csproj -c Release --no-build --verbosity normal
+
+      - name: Validate Docker Compose Configuration
+        run: docker compose --env-file .env.example config -q

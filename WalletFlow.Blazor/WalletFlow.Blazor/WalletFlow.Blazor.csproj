@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -13,7 +13,6 @@
     <ProjectReference Include="..\..\WalletFlow.Application\WalletFlow.Application.csproj" />
     <ProjectReference Include="..\..\WalletFlow.Domain\WalletFlow.Domain.csproj" />
     <ProjectReference Include="..\..\WalletFlow.Infrastructure\WalletFlow.Infrastructure.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
     <PackageReference Include="QuestPDF" Version="2026.5.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
   </ItemGroup>

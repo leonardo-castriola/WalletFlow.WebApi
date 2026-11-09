@@ -22,8 +22,6 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Envio do extrato filtrado por período ao endereço de e-mail da própria conta, como PDF anexado com todos os lançamentos e seus totais.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
 - Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo mensal (receitas menos despesas) na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
-- Atualização automática dos dados e gráficos do painel após criar, editar, excluir ou importar movimentações, inclusive em outras sessões conectadas; a atualização é propagada em tempo real por SignalR.
-- Agrupamento mensal dos gráficos conforme o fuso da carteira (`Filters:TimeZoneId`, padrão `America/Sao_Paulo`), para que lançamentos próximos à virada do mês sejam contabilizados no período local correto.
 - Orçamento de despesas configurável por usuário e mês, definido por valor em reais ou por percentual da receita daquele período. Meses sem configuração própria reaproveitam automaticamente a configuração do mês configurado mais recente; percentuais são recalculados com a receita do mês selecionado.
 - Alertas por SignalR e por e-mail quando as despesas atingem ou ultrapassam 100% do limite mensal. Cada usuário recebe no máximo um alerta por mês; uma configuração alterada pode habilitar um novo alerta para aquele período.
 - Tooltips individuais nos pontos dos gráficos para consultar os valores de cada série e mês; valores e percentuais das receitas e despesas também ficam disponíveis junto às visualizações.
@@ -36,7 +34,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Documentação interativa pelo Swagger em desenvolvimento.
 - Interface web Blazor com página inicial autenticada, painel financeiro, extrato e cadastro de transações integrado à API. Após o login, o usuário é direcionado à página inicial (`/inicio`), que oferece atalhos para o painel e o extrato.
 - Tela de login responsiva na rota `/`, com validação, alternância de visibilidade da senha e atalhos para cadastro e recuperação.
-- Cadastro sem confirmação por e-mail, recuperação de senha por link enviado ao e-mail e proteção das rotas financeiras pelo ASP.NET Core Identity.
+- Cadastro com confirmação de e-mail configurável (`Identity:RequireConfirmedEmail`), recuperação de senha por link enviado ao e-mail e proteção das rotas financeiras pelo ASP.NET Core Identity. No Compose de produção, a confirmação fica habilitada.
 - Cadastro e atualização do perfil com nome completo, telefone, CPF e endereço; ao informar um CEP com oito dígitos, a tela consulta o ViaCEP e preenche logradouro, bairro, cidade e UF para conferência.
 - Identificação do titular no relatório de movimentação financeira em PDF; a emissão exige que os dados cadastrais obrigatórios estejam completos.
 - Filtros de tipo e período no extrato, preservando paginação e ordenação das movimentações mais recentes.
@@ -104,7 +102,7 @@ dotnet run --project WalletFlow.Blazor/WalletFlow.Blazor/WalletFlow.Blazor.cspro
 
 Abra o frontend em [http://localhost:5087](http://localhost:5087). Após entrar, o sistema abre a página inicial autenticada (`/inicio`), com atalhos para o painel financeiro e o extrato. O Swagger da API fica em [http://localhost:5250/swagger](http://localhost:5250/swagger).
 
-Os filtros de data do extrato e o agrupamento mensal dos gráficos consideram o fuso configurado em `Filters:TimeZoneId`. O padrão incluído é `America/Sao_Paulo`; ajuste esse valor para o fuso da carteira quando necessário. Valores monetários aceitam até duas casas decimais.
+Os filtros de data do extrato consideram o fuso configurado em `Filters:TimeZoneId` no servidor Blazor. O padrão incluído é `America/Sao_Paulo`; ajuste esse valor para o fuso da carteira quando necessário. Valores monetários aceitam até duas casas decimais.
 
 No Visual Studio, também é possível iniciar API e frontend simultaneamente usando a configuração `WalletFlow.WebApi.slnLaunch`.
 
@@ -142,9 +140,9 @@ Com o perfil local, abra [http://localhost:5250/swagger](http://localhost:5250/s
 
 ## Autenticação
 
-O Blazor usa cookies protegidos pelo ASP.NET Core Identity. O cadastro confirma a conta na própria criação e exibe uma mensagem de sucesso, sem enviar e-mail; o SMTP é usado para recuperação de senha. O formulário de redefinição valida os dados recebidos, salva a nova senha pelo ASP.NET Core Identity e exibe a confirmação somente após a gravação. Se os campos não forem enviados ou o token for inválido, a página informa o problema e mantém a senha anterior. As senhas seguem a política do Identity (mínimo de 12 caracteres, letras maiúsculas e minúsculas, número e símbolo), com bloqueio temporário após cinco tentativas inválidas. A sessão é HttpOnly, SameSite=Lax, dura oito horas e é revalidada no circuito Blazor.
+O Blazor usa cookies protegidos pelo ASP.NET Core Identity. A confirmação de e-mail é controlada por `Identity:RequireConfirmedEmail`: fica desabilitada por padrão em desenvolvimento e habilitada no Compose de produção. O SMTP envia as confirmações e os links de recuperação. O formulário de redefinição valida os dados recebidos, salva a nova senha pelo ASP.NET Core Identity e exibe a confirmação somente após a gravação. Se os campos não forem enviados ou o token for inválido, a página informa o problema e mantém a senha anterior. As senhas seguem a política do Identity (mínimo de 12 caracteres, letras maiúsculas e minúsculas, número e símbolo), com bloqueio temporário após cinco tentativas inválidas. A sessão é HttpOnly, SameSite=Lax, dura oito horas e é revalidada no circuito Blazor.
 
-As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimento, o host Blazor e a API já apontam para `WalletFlow/Wallet.db`. Em produção, configure o mesmo caminho absoluto em `ConnectionStrings__DefaultConnection` para os dois processos. As migrações são aplicadas na inicialização. Transações preexistentes ficam sem proprietário e não aparecem para nenhuma conta até serem associadas por um processo administrativo.
+As tabelas do Identity e as transações ficam no mesmo SQLite. Em desenvolvimento, o host Blazor e a API já apontam para `WalletFlow/Wallet.db`. No Compose, ambos usam `/data/Wallet.db` no volume persistente; somente a API executa as migrações automaticamente (`Database__AutoMigrate=true`). Transações preexistentes ficam sem proprietário e não aparecem para nenhuma conta até serem associadas por um processo administrativo.
 
 O host Blazor deriva o ID do usuário da sessão autenticada e emite um JWT assinado, com validade de três minutos, para cada chamada servidor-a-servidor. A API valida assinatura, emissor, audiência, validade e existência da conta; também exige a chave de serviço `X-API-Key` em produção. O ID não é aceito de cabeçalhos enviados pelo cliente. As consultas e alterações continuam limitadas ao proprietário. O Blazor e a API devem usar HTTPS; nenhuma dessas credenciais é enviada ao navegador.
 
@@ -183,36 +181,6 @@ dotnet run --project WalletFlow/WalletFlow.csproj --no-launch-profile
 
 Configure as duas variáveis de autenticação no host Blazor e na API. O host envia `X-API-Key` e `Authorization: Bearer` apenas em chamadas servidor-a-servidor. Não coloque nenhuma dessas chaves no cliente ou no navegador.
 
-## Implantação em produção
-
-O projeto ainda precisa de configuração da plataforma e de alguns ajustes antes de atender usuários com dados reais. Os valores de exemplo acima não devem ser usados como segredos. Configure os serviços com `ASPNETCORE_ENVIRONMENT=Production`, HTTPS e um gerenciador de segredos da hospedagem. API e Blazor precisam receber a mesma `Authentication__ApiKey` e `Authentication__Jwt__SigningKey`; defina também `Api__BaseUrl`, `Identity__PublicBaseUrl` e as configurações SMTP descritas acima. O Blazor exige que suas URLs públicas usem HTTPS. A porta SMTP deve ser válida para o provedor; o remetente deve estar autorizado por ele.
-
-### Banco e migrações
-
-API e Blazor usam o mesmo `WalletDbContext` para transações e Identity. SQLite pode ser mantido para uma implantação pequena, desde que os dois serviços tenham acesso ao mesmo arquivo em armazenamento persistente, com permissões de leitura e gravação. Não use disco efêmero nem execute múltiplas instâncias da aplicação apontando para um arquivo SQLite compartilhado. Para separar ou escalar os serviços, migre para um banco gerenciado e adapte as consultas específicas de SQLite (`julianday` e `INSERT OR IGNORE`).
-
-Atualmente, os dois hosts aplicam migrações durante a inicialização. Evite iniciá-los simultaneamente quando compartilham o banco: isso pode causar bloqueio no SQLite. Antes da publicação, escolha um único executor de migrações ou mova a aplicação delas para uma etapa controlada do processo de implantação. Planeje cópias de segurança e teste a restauração do banco.
-
-### Proteções e operação ainda necessárias
-
-- Persistir as chaves do ASP.NET Core Data Protection em armazenamento durável, compartilhado entre instâncias quando aplicável. Sem isso, reinicializações podem invalidar cookies de sessão e tokens de recuperação de senha.
-- Se houver proxy reverso ou terminação TLS fora do processo .NET, configurar cabeçalhos encaminhados somente para proxies confiáveis e validar o fluxo de HTTPS e cookies no endereço público.
-- Adicionar limitação de requisições aos fluxos de login, cadastro e recuperação de senha, protegendo também o serviço SMTP contra abuso.
-- Substituir `AllowedHosts: "*"` pelos domínios efetivamente usados em produção.
-- Criar endpoints de saúde para disponibilidade e prontidão, incluindo verificação do banco, e conectá-los ao monitoramento da hospedagem.
-- Adicionar automação de CI/CD para restaurar, compilar, executar todos os testes e gerar os artefatos da API e do Blazor. O repositório não inclui atualmente um Dockerfile nem um workflow de publicação.
-
-O gráfico de evolução agrupa os dados após carregar as transações do usuário; para contas com histórico grande, filtre a janela do relatório diretamente na consulta ao banco, mantendo o cálculo do saldo acumulado anterior. Antes de trocar SQLite por outro provedor, adapte e valide as consultas SQL específicas de SQLite usadas pelos repositórios e relatórios.
-
-### Checklist de liberação
-
-1. Configure segredos e URLs reais no ambiente de hospedagem; confirme que nenhuma chave ou senha foi incluída no repositório ou no artefato.
-2. Configure armazenamento persistente para o banco e para as chaves de Data Protection; confirme que API e Blazor acessam o mesmo banco.
-3. Execute migrações de forma controlada, sem inicialização concorrente dos dois serviços sobre SQLite.
-4. Execute `dotnet build WalletFlow.WebApi.slnx` e `dotnet test WalletFlow.WebApi.slnx`; publique somente com compilação e testes aprovados. Os testes de navegador dependem do Google Chrome instalado.
-5. Faça uma implantação de homologação em HTTPS e verifique cadastro, login, recuperação de senha, operações financeiras, importação de extrato, orçamento, e-mail, SignalR e persistência após reiniciar os serviços.
-6. Confirme que a licença Community do QuestPDF atende ao uso pretendido e que há monitoramento, cópia de segurança e procedimento de restauração.
-
 ## Como usar
 
 O cliente Blazor envia a identidade autenticada automaticamente por JWT. A API rejeita chamadas que tentem definir o usuário por `X-User-ID`; em produção também exige `X-API-Key`. Não exponha o segredo de assinatura ou a chave de serviço em clientes públicos. O campo `tipo` usa `0` para despesa e `1` para receita.
@@ -250,7 +218,7 @@ O corpo de `PUT /api/Orcamento` aceita orçamento em reais ou percentual da rece
 | Recuperar senha | `/esqueci-a-senha` | Solicitar link de redefinição por e-mail |
 | Redefinir senha | `/redefinir-senha` | Definir senha usando token enviado por e-mail |
 | Início autenticado | `/inicio` | Acessar o painel ou o extrato |
-| Painel financeiro | `/painel` | Consultar saldo e movimentações recentes, visualizar gráficos dos últimos seis meses atualizados automaticamente após alterações financeiras e personalizar sua ordem de apresentação |
+| Painel financeiro | `/painel` | Consultar saldo e movimentações recentes, visualizar gráficos dos últimos seis meses e personalizar sua ordem de apresentação |
 | Orçamento mensal | `/orcamento` | Definir limite por valor ou percentual, reutilizar a última configuração em meses sem ajuste próprio e acompanhar despesas até o limite |
 | Extrato | `/transacoes` | Consultar, filtrar e paginar transações |
 | Nova transação | `/transacoes/nova` | Validar e cadastrar uma receita ou despesa |
@@ -302,6 +270,25 @@ Os testes xUnit cobrem regras unitárias, comportamento da API e integração po
 ```bash
 dotnet test WalletFlow.WebApi.slnx
 ```
+
+## Implantação com Docker
+
+A solução inclui Dockerfiles para a API e o Blazor, um `docker-compose.yml` com Caddy como proxy HTTPS, verificações de saúde e volumes persistentes, além de uma rotina de backup SQLite criptografado. Antes da implantação:
+
+1. Configure os registros DNS de `BLAZOR_DOMAIN` e `API_DOMAIN` para apontarem ao servidor. Libere as portas 80 e 443 para que o Caddy emita e renove os certificados TLS.
+2. Copie `.env.example` para `.env` e substitua todos os exemplos por domínios e credenciais reais. Gere valores fortes e distintos para as chaves de API, assinatura JWT e criptografia de backups; use os mesmos valores de API/JWT no host Blazor e na API. Não versione nem compartilhe o `.env`.
+3. Configure SMTP para confirmação de cadastro, recuperação de senha, extratos e alertas. Se os backups precisarem ficar fora do servidor, configure `BACKUP_OFFSITE_PATH` para um armazenamento externo montado ou implemente `BACKUP_OFFSITE_CMD`; o valor padrão cria uma pasta local e não é uma cópia externa.
+4. Execute a validação de configuração e inicie os serviços:
+
+```bash
+cp .env.example .env
+./scripts/preflight-check.sh
+docker compose up -d --build
+```
+
+No PowerShell, a cópia pode ser feita com `Copy-Item .env.example .env`; o script de pré-validação deve ser executado em um ambiente com shell compatível. O serviço `walletflow-pre-migrate-backup` cria um backup antes da primeira migração quando já existe um banco. A API aplica as migrações; o Blazor aguarda a API saudável. Os endpoints `/health` são usados pelo Compose para verificar os serviços.
+
+O banco e as chaves de Data Protection ficam no volume Docker `walletflow-data`; os backups periódicos são criptografados e mantidos conforme `BACKUP_RETENTION_DAYS`. Preserve as chaves de criptografia e mantenha cópias de backup acessíveis antes de atualizar. O pipeline `.github/workflows/ci.yml` valida restauração, auditoria de dependências, compilação, testes e configuração do Compose; a validação de configuração não substitui um teste de build e implantação no servidor de destino.
 
 ## Relatórios mensais por e-mail
 

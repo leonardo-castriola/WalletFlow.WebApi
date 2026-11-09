@@ -2,7 +2,9 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using WalletFlow.Api.Middleware;
 using WalletFlow.Api.Security;
@@ -14,6 +16,26 @@ using WalletFlow.Api.Background;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. REGISTRO DE SERVIÇOS
+DependencyInjection.ValidateProductionAllowedHosts(builder.Configuration, builder.Environment);
+builder.Services.AddWalletFlowForwardedHeaders(builder.Configuration);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 120);
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+});
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -86,6 +108,7 @@ var app = builder.Build();
 await app.Services.ApplyWalletFlowMigrationsAsync();
 
 // 3. PIPELINE DE REQUISIÇÕES
+app.UseForwardedHeaders();
 
 // Tratamento global de exceções
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -120,9 +143,11 @@ if (!app.Environment.IsDevelopment())
 
 // Autenticação e autorização
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
-// Controllers
+// Health check e Controllers
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 
 app.Run();

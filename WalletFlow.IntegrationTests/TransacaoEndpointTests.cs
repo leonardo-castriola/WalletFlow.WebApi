@@ -237,7 +237,7 @@ public sealed class TransacaoEndpointTests : IAsyncLifetime
         using var abaixoDoLimite = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
         Assert.Equal(HttpStatusCode.NoContent, abaixoDoLimite.StatusCode);
 
-        await CriarTransacaoAsync("Despesa no limite", 21m, TipoTransacao.Despesa);
+        var despesaNoLimiteId = await CriarTransacaoAsync("Despesa no limite", 21m, TipoTransacao.Despesa);
         using var alerta = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
         Assert.Equal(HttpStatusCode.OK, alerta.StatusCode);
         var dadosAlerta = await alerta.Content.ReadFromJsonAsync<AlertaOrcamentoDto>();
@@ -251,6 +251,31 @@ public sealed class TransacaoEndpointTests : IAsyncLifetime
         Assert.NotNull(orcamentoDoDono);
         Assert.Equal(100m, orcamentoDoDono.Despesas);
         Assert.True(orcamentoDoDono.AlertaEnviado);
+        Assert.Single(_factory.SentEmails);
+
+        var despesaAdicionalId = await CriarTransacaoAsync("Despesa adicional acima do limite", 96.2m, TipoTransacao.Despesa);
+        using var reSalvarMesmoLimite = await _client.PutAsJsonAsync($"/api/Orcamento?ano={ano}&mes={mes}", new AtualizarOrcamentoMensalDto(100m));
+        Assert.Equal(HttpStatusCode.OK, reSalvarMesmoLimite.StatusCode);
+        using var novoAlertaAposSalvar = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
+        Assert.Equal(HttpStatusCode.OK, novoAlertaAposSalvar.StatusCode);
+        var dadosNovoAlerta = await novoAlertaAposSalvar.Content.ReadFromJsonAsync<AlertaOrcamentoDto>();
+        Assert.NotNull(dadosNovoAlerta);
+        Assert.Equal(196.2m, dadosNovoAlerta.Despesas);
+        Assert.Equal(100m, dadosNovoAlerta.Limite);
+        Assert.Equal(196.2m, dadosNovoAlerta.PercentualUtilizado);
+        Assert.Equal(2, _factory.SentEmails.Count);
+        Assert.Contains("196,2%", _factory.SentEmails.Last().HtmlBody);
+
+        using var exclusaoAdicional = await _client.DeleteAsync($"/api/Transacao/{despesaAdicionalId}");
+        using var exclusaoNoLimite = await _client.DeleteAsync($"/api/Transacao/{despesaNoLimiteId}");
+        Assert.Equal(HttpStatusCode.NoContent, exclusaoAdicional.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, exclusaoNoLimite.StatusCode);
+        using var abaixoAposExclusao = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
+        Assert.Equal(HttpStatusCode.NoContent, abaixoAposExclusao.StatusCode);
+        await CriarTransacaoAsync("Nova despesa que cruza novamente", 36.4m, TipoTransacao.Despesa);
+        using var alertaAoCruzarNovamente = await _client.PostAsync($"/api/Orcamento/verificar-alerta?ano={ano}&mes={mes}", content: null);
+        Assert.Equal(HttpStatusCode.OK, alertaAoCruzarNovamente.StatusCode);
+        Assert.Equal(3, _factory.SentEmails.Count);
 
         UsarUsuario("usuario-2");
         using var consultaDeOutroUsuario = await _client.GetAsync($"/api/Orcamento?ano={ano}&mes={mes}");

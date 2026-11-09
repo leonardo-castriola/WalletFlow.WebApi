@@ -1,7 +1,9 @@
-using WalletFlow.Blazor.Client.Pages;
+using System.Threading.RateLimiting;
 using WalletFlow.Blazor.Components;
 using WalletFlow.Blazor.Components.Layout;
 using WalletFlow.Blazor.Services;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Components.Authorization;
 using WalletFlow.Application.Services;
@@ -11,18 +13,63 @@ using WalletFlow.Infrastructure.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
+DependencyInjection.ValidateProductionAllowedHosts(builder.Configuration, builder.Environment);
+builder.Services.AddWalletFlowForwardedHeaders(builder.Configuration);
+
+var dataProtection = builder.Services.AddDataProtection()
+    .SetApplicationName("WalletFlow");
+var keysDirectory = builder.Configuration["DataProtection:KeysDirectory"];
+if (!string.IsNullOrWhiteSpace(keysDirectory) || !builder.Environment.IsDevelopment())
+{
+    var resolvedKeysDir = string.IsNullOrWhiteSpace(keysDirectory)
+        ? Path.Combine(builder.Environment.ContentRootPath, "dpkeys")
+        : Path.GetFullPath(keysDirectory, builder.Environment.ContentRootPath);
+    Directory.CreateDirectory(resolvedKeysDir);
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(resolvedKeysDir));
+}
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    var authPermitLimit = builder.Configuration.GetValue("RateLimiting:AuthPermitLimit", 30);
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        if (!HttpMethods.IsPost(httpContext.Request.Method))
+            return RateLimitPartition.GetNoLimiter("read");
+
+        var path = httpContext.Request.Path.Value ?? string.Empty;
+        var isSensitiveAuthRoute = path.Equals("/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/criar-conta", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/esqueci-a-senha", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/redefinir-senha", StringComparison.OrdinalIgnoreCase);
+
+        if (!isSensitiveAuthRoute)
+            return RateLimitPartition.GetNoLimiter("general");
+
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = authPermitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+});
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents()
-    .AddAuthenticationStateSerialization();
+    .AddInteractiveServerComponents();
 builder.Services.AddSignalR();
 
 builder.Services.AddWalletFlowInfrastructure(builder.Configuration, builder.Environment);
+var requireConfirmedEmail = builder.Configuration.GetValue(
+    "Identity:RequireConfirmedEmail",
+    !builder.Environment.IsDevelopment());
 builder.Services.AddIdentityCore<WalletUser>(options =>
 {
     options.User.RequireUniqueEmail = true;
-    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedEmail = requireConfirmedEmail;
     options.Password.RequiredLength = 12;
     options.Password.RequiredUniqueChars = 4;
     options.Password.RequireDigit = true;
@@ -108,11 +155,9 @@ var app = builder.Build();
 await app.Services.ApplyWalletFlowMigrationsAsync();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseWebAssemblyDebugging();
-}
-else
+app.UseForwardedHeaders();
+
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
@@ -125,14 +170,14 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseAntiforgery();
 
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapStaticAssets();
 app.MapHub<BudgetAlertsHub>("/hubs/alertas-orcamento").RequireAuthorization();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(WalletFlow.Blazor.Client._Imports).Assembly);
+    .AddInteractiveServerRenderMode();
 
 app.Run();

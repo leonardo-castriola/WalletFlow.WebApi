@@ -1,9 +1,17 @@
 @page "/criar-conta"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @using System.ComponentModel.DataAnnotations
+@using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
+@using WalletFlow.Application.Abstractions
+@using WalletFlow.Blazor.Services
 @using WalletFlow.Infrastructure.Persistence
 @inject UserManager<WalletUser> UserManager
+@inject IEmailSender EmailSender
+@inject IConfiguration Configuration
+@inject IHostEnvironment HostEnvironment
+@inject NavigationManager Navigation
+@inject ILogger<Register> Logger
 
 <PageTitle>Criar conta | WalletFlow</PageTitle>
 
@@ -120,11 +128,14 @@
     {
         _errors.Clear();
         var model = _model!;
+        var requireConfirmedEmail = Configuration.GetValue(
+            "Identity:RequireConfirmedEmail",
+            !HostEnvironment.IsDevelopment());
         var user = new WalletUser
         {
             UserName = model.Email.Trim(),
             Email = model.Email.Trim(),
-            EmailConfirmed = true,
+            EmailConfirmed = !requireConfirmedEmail,
             NomeCompleto = model.NomeCompleto.Trim(),
             Genero = model.Genero,
             PhoneNumber = model.Telefone.Trim(),
@@ -150,8 +161,30 @@
             return;
         }
 
+        if (requireConfirmedEmail)
+        {
+            try
+            {
+                var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+                var link = IdentityLinkBuilder.Build("confirmar-email", user.Id, token, Configuration, HostEnvironment, Navigation);
+                var safeLink = HtmlEncoder.Default.Encode(link);
+                await EmailSender.SendAsync(
+                    user.Email!,
+                    "Confirme seu cadastro no WalletFlow",
+                    $"<p>Bem-vindo(a) ao WalletFlow! <a href=\"{safeLink}\">Confirme seu e-mail neste link</a> para ativar sua conta.</p>");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Falha ao enviar o e-mail de confirmação de cadastro.");
+                _errors.Add("A conta foi criada, mas não foi possível enviar o e-mail de confirmação. Verifique o serviço de e-mail.");
+                return;
+            }
+        }
+
         _completed = true;
-        _message = "Usuário cadastrado com sucesso.";
+        _message = requireConfirmedEmail
+            ? "Cadastro realizado! Enviamos um link de confirmação para seu e-mail."
+            : "Usuário cadastrado com sucesso.";
     }
 
     private sealed class RegisterModel

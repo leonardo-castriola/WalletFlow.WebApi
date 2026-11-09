@@ -345,6 +345,7 @@ html[data-theme="dark"] .bg-light { background-color: var(--wf-surface) !importa
 /* Os rótulos SVG criados via MarkupString não recebem o atributo de CSS isolado do componente. */
 html[data-theme="dark"] .finance-chart .chart-axis-label,
 html[data-theme="dark"] .finance-chart .chart-month-label { fill: #b8c5d8; }
+.finance-chart .chart-hover-text { fill: #f8fafc; font-size: 10.5px; font-variant-numeric: tabular-nums; font-weight: 650; }
 html[data-theme="dark"] .finance-chart .chart-grid-line { stroke: #45536a; }
 html[data-theme="dark"] .finance-chart .chart-zero-line { stroke: #74839a; }
 
