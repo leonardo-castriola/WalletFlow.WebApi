@@ -21,7 +21,7 @@ O WalletFlow reúne uma API ASP.NET Core e uma aplicação web Blazor para organ
 - Filtro por tipo (despesa ou receita) e por intervalo de datas, integrado à paginação.
 - Envio do extrato filtrado por período ao endereço de e-mail da própria conta, como PDF anexado com todos os lançamentos e seus totais.
 - Cálculo do saldo consolidado, inclusive quando o resultado é negativo.
-- Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
+- Painel financeiro com gráficos dos últimos seis meses: comparação de receitas, despesas e saldo mensal (receitas menos despesas) na mesma escala em reais; participação das receitas por mês; despesas mensais; e evolução do saldo acumulado em gráfico de área.
 - Atualização automática dos dados e gráficos do painel após criar, editar, excluir ou importar movimentações, inclusive em outras sessões conectadas; a atualização é propagada em tempo real por SignalR.
 - Agrupamento mensal dos gráficos conforme o fuso da carteira (`Filters:TimeZoneId`, padrão `America/Sao_Paulo`), para que lançamentos próximos à virada do mês sejam contabilizados no período local correto.
 - Orçamento de despesas configurável por usuário e mês, definido por valor em reais ou por percentual da receita daquele período. Meses sem configuração própria reaproveitam automaticamente a configuração do mês configurado mais recente; percentuais são recalculados com a receita do mês selecionado.

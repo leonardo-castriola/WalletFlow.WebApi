@@ -47,7 +47,7 @@
 <div class="charts-grid">
 <section class="panel chart-card" style="@OrdemCss("flow")">
         <div class="chart-heading">
-            <div><p class="eyebrow">FLUXO DE CAIXA</p><h2>Receitas, despesas e saldo</h2></div>
+            <div><p class="eyebrow">FLUXO DE CAIXA</p><h2>Receitas, despesas e saldo do mês</h2></div>
             <div class="chart-heading-actions"><span class="chart-period">Últimos 6 meses</span>@ControlesOrdem("flow")</div>
         </div>
         @if (_carregando)
@@ -63,10 +63,10 @@
             <div class="chart-legend">
                 <span><i class="legend-dot income-dot"></i>Receitas</span>
                 <span><i class="legend-dot expense-dot"></i>Despesas</span>
-                <span><i class="legend-dot balance-dot"></i>Saldo acumulado</span>
+                <span><i class="legend-dot balance-dot"></i>Saldo do mês</span>
             </div>
             <div class="chart-scroll">
-                <svg class="finance-chart" viewBox="0 0 720 280" role="img" aria-label="Evolução mensal das receitas, despesas e saldo acumulado">
+                <svg class="finance-chart" viewBox="0 0 720 280" role="img" aria-label="Comparação mensal de receitas, despesas e saldo do mês">
                     @foreach (var linha in Enumerable.Range(0, 5))
                     {
                         var valor = ValorNoNivelFluxo(linha);
@@ -89,15 +89,15 @@
                             <circle class="chart-point expense-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Despesas))" r="5">
                                 <title>@($"{NomeMes(ponto.Mes)} · Despesa: {ponto.Despesas.ToString("C", Cultura)}")</title>
                             </circle>
-                            <circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(YFluxo(ponto.Saldo))" r="5">
-                                <title>@($"{NomeMes(ponto.Mes)} · Saldo acumulado: {ponto.Saldo.ToString("C", Cultura)}")</title>
+                            <circle class="chart-point balance-point" cx="@x" cy="@SvgNumero(YFluxo(SaldoDoMes(ponto)))" r="5">
+                                <title>@($"{NomeMes(ponto.Mes)} · Saldo do mês: {SaldoDoMes(ponto).ToString("C", Cultura)}")</title>
                             </circle>
                             <text class="chart-month-label" x="@x" y="252" text-anchor="middle">@NomeMes(ponto.Mes)</text>
                         </g>
                     }
                 </svg>
             </div>
-            <p class="chart-note">As três séries usam a mesma escala em reais. O saldo considera o histórico completo da conta.</p>
+            <p class="chart-note">As três séries usam a mesma escala em reais. O saldo do mês é a diferença entre receitas e despesas daquele período.</p>
         }
     </section>
 
@@ -396,8 +396,8 @@
         }
     }
 
-    private decimal MinimoFluxo => Math.Min(0m, _evolucao?.Meses.SelectMany(ponto => new[] { ponto.Receitas, ponto.Despesas, ponto.Saldo }).DefaultIfEmpty(0m).Min() ?? 0m);
-    private decimal MaximoFluxo => Math.Max(0m, _evolucao?.Meses.SelectMany(ponto => new[] { ponto.Receitas, ponto.Despesas, ponto.Saldo }).DefaultIfEmpty(0m).Max() ?? 0m);
+    private decimal MinimoFluxo => Math.Min(0m, _evolucao?.Meses.SelectMany(ponto => new[] { ponto.Receitas, ponto.Despesas, SaldoDoMes(ponto) }).DefaultIfEmpty(0m).Min() ?? 0m);
+    private decimal MaximoFluxo => Math.Max(0m, _evolucao?.Meses.SelectMany(ponto => new[] { ponto.Receitas, ponto.Despesas, SaldoDoMes(ponto) }).DefaultIfEmpty(0m).Max() ?? 0m);
     private decimal MaximoDespesa => _evolucao?.Meses.Select(ponto => ponto.Despesas).DefaultIfEmpty(0m).Max() ?? 0m;
     private decimal TotalReceitasPeriodo => _evolucao?.Meses.Sum(ponto => ponto.Receitas) ?? 0m;
     private double PercentualReceita(decimal valor) => TotalReceitasPeriodo <= 0 ? 0 : (double)(valor / TotalReceitasPeriodo) * 100d;
@@ -445,7 +445,8 @@
     private string PontosFluxo(Func<PontoEvolucaoFinanceiraDto, decimal> seletor) =>
         string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{YFluxo(seletor(ponto)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}"));
     private string PontosSaldoComparativo() =>
-        string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{SvgNumero(YFluxo(ponto.Saldo))}"));
+        string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{SvgNumero(YFluxo(SaldoDoMes(ponto)))}"));
+    private static decimal SaldoDoMes(PontoEvolucaoFinanceiraDto ponto) => ponto.Receitas - ponto.Despesas;
     private string PontosSaldo() =>
         string.Join(" ", _evolucao!.Meses.Select((ponto, indice) => $"{92 + indice * 118},{YSaldo(ponto.Saldo).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}"));
     private string PontosAreaSaldo()
