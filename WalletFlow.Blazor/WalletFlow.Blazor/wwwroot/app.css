@@ -132,7 +132,6 @@ body {
 .welcome-hint { align-items: center; color: #64748b; display: flex; font-size: .9rem; gap: .5rem; margin-top: 2.25rem; }
 .balance-label { color: #d3e1f2; margin: 0 0 .5rem; }
 .balance-value { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; margin: 0; }
-.balance-icon { align-items: center; border: 1px solid #ffffff55; border-radius: 50%; display: flex; font-size: 1.2rem; font-weight: 700; height: 3.5rem; justify-content: center; width: 3.5rem; }
 
 .dashboard-grid { align-items: start; display: grid; gap: 1.25rem; grid-template-columns: minmax(260px, .75fr) minmax(0, 1.8fr); }
 .panel { background: white; border: 1px solid #e5eaf1; border-radius: 1rem; padding: 1.4rem; }
