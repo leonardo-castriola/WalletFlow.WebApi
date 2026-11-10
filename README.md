@@ -5,6 +5,8 @@
 ![Blazor](https://img.shields.io/badge/Frontend-Blazor-512BD4?logo=blazor&logoColor=white)
 ![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
 ![xUnit](https://img.shields.io/badge/Tests-xUnit-512BD4)
+[![CI](https://img.shields.io/github/actions/workflow/status/leonardo-castriola/WalletFlow.WebApi/ci.yml?label=CI&logo=githubactions&logoColor=white)](https://github.com/leonardo-castriola/WalletFlow.WebApi/actions/workflows/ci.yml)
+[![Licença: Proprietária (Portfólio)](https://img.shields.io/badge/License-Proprietary%20(Portfolio)-informational)](LICENSE)
 
 > Aplicação de controle financeiro com API REST e interface Blazor para registrar receitas e despesas, consultar o extrato e acompanhar o saldo da carteira.
 
@@ -65,6 +67,46 @@ A solução separa o domínio, os casos de uso, a persistência e as interfaces 
 - `WalletFlow.BrowserTests`: testes de navegação da interface com Playwright e Google Chrome.
 
 As dependências seguem em direção ao domínio: Infrastructure implementa contratos definidos pela Application, enquanto API e Blazor compõem essas camadas na inicialização. O `WalletDbContext` e as migrações ficam em `WalletFlow.Infrastructure`.
+
+### Fluxo da arquitetura
+
+```mermaid
+flowchart LR
+    User(["👤 Usuário\n(Navegador)"])
+
+    subgraph Host["Ambiente WalletFlow (Docker / Host)"]
+        Caddy["🔒 Caddy\n(Reverse Proxy HTTPS)"]
+
+        subgraph App["Apresentação e API (.NET 10)"]
+            Blazor["🖥️ WalletFlow.Blazor\n(UI Interativa / Identity / SignalR)"]
+            Api["⚙️ WalletFlow API\n(Controllers REST / Background Jobs)"]
+        end
+
+        subgraph Core["Núcleo e Infraestrutura"]
+            Application["📐 WalletFlow.Application\n(Use Cases / Validações / OFX & CSV)"]
+            Domain["💎 WalletFlow.Domain\n(Entidades / Regras de Negócio)"]
+            Infra["🗄️ WalletFlow.Infrastructure\n(EF Core 10 / QuestPDF / Repositórios)"]
+        end
+
+        Db[("💾 SQLite\n(Carteira + Identity)")]
+    end
+
+    Smtp(["📧 Servidor SMTP\n(Alertas, PDF e Relatórios)"])
+    ViaCep(["🌐 API ViaCEP\n(Consulta de Endereço)"])
+
+    User -->|"HTTPS"| Caddy
+    Caddy --> Blazor
+    Caddy --> Api
+    Blazor -->|"HTTP REST (JWT / API Key)"| Api
+    Blazor -->|"SignalR (Tempo Real)"| User
+    Blazor -->|"Auth / Perfil"| Infra
+    Blazor -->|"GET CEP"| ViaCep
+    Api --> Application
+    Application --> Domain
+    Infra -.->|"Implementa Contratos"| Application
+    Infra -->|"Lê / Grava"| Db
+    Infra -->|"Envia E-mails"| Smtp
+```
 
 ## Pré-requisitos
 
@@ -306,13 +348,17 @@ A API e o host Blazor compartilham o mesmo `UserSecretsId` local, então as cred
 
 Além do resumo mensal, a API tenta enviar uma notificação quando as despesas de um usuário atingem ou ultrapassam o limite configurado para o mês. O cálculo usa o valor em reais ou o limite derivado do percentual da receita. O alerta por e-mail é processado uma vez no mês e usa as mesmas credenciais SMTP descritas acima; a interface também exibe a notificação em tempo real via SignalR quando o usuário está conectado.
 
-## Como contribuir
+## Padrões de desenvolvimento
 
 1. Crie uma branch para sua alteração.
 2. Faça alterações focadas e commits atômicos com mensagens Conventional Commits, por exemplo `feat: adiciona filtro por período`.
 3. Execute `dotnet build WalletFlow.WebApi.slnx` e `dotnet test WalletFlow.WebApi.slnx`.
-4. Abra um Pull Request explicando a mudança e como ela foi verificada.
+4. Valide a mudança localmente com a suíte de testes antes de integrar.
 
 ## Licença
 
-Este repositório ainda não define uma licença. Até que uma licença seja adicionada, todos os direitos permanecem reservados aos titulares do projeto.
+Copyright (c) 2026 Leonardo Castriola. Todos os direitos reservados.
+
+Este é um **projeto proprietário disponibilizado publicamente para fins de portfólio e avaliação técnica**. A visualização do código e a execução local para avaliação são permitidas, mas a comercialização, modificação e redistribuição por terceiros não são autorizadas.
+
+As bibliotecas e pacotes de terceiros utilizados pela solução permanecem regidos por suas respectivas licenças originais. Consulte o arquivo [LICENSE](LICENSE) para os termos completos.

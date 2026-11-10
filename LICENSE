@@ -1,0 +1,45 @@
+LICENÇA PROPRIETÁRIA DE EXIBIÇÃO E PORTFÓLIO — WALLETFLOW
+
+Copyright (c) 2026 Leonardo Castriola. Todos os direitos reservados.
+
+1. ESCOPO E TITULARIDADE
+Este software, incluindo seu código-fonte, arquitetura, documentação, testes e
+elementos visuais autorais ("Software"), é de propriedade exclusiva de seu autor
+e está protegido pelas leis de direitos autorais e de propriedade intelectual
+aplicáveis (incluindo a Lei nº 9.609/1998 e a Lei nº 9.610/1998 no Brasil, bem
+como tratados internacionais).
+
+2. CONCESSÃO LIMITADA PARA AVALIAÇÃO E PORTFÓLIO
+Sem prejuízo das permissões mínimas exigidas pelos Termos de Serviço do GitHub
+para repositórios públicos, é concedida permissão gratuita, não exclusiva e
+revogável a recrutadores, avaliadores técnicos, estudantes e demais visitantes
+para:
+  a) Visualizar e inspecionar o código-fonte e a documentação neste repositório;
+  b) Clonar e executar o Software localmente em ambiente isolado, única e
+     exclusivamente para fins de avaliação técnica, estudo pessoal ou análise de
+     portfólio profissional do autor.
+
+3. RESTRIÇÕES EXPRESSAS
+Sem a autorização prévia, expressa e por escrito do titular dos direitos autorais,
+NÃO É PERMITIDO:
+  a) Utilizar o Software, no todo ou em parte, para fins comerciais, produtivos
+     ou de prestação de serviços a terceiros (incluindo oferta como SaaS);
+  b) Copiar, modificar, adaptar, criar obras derivadas ou incorporar partes deste
+     código em outros projetos (públicos ou privados);
+  c) Redistribuir, sublicenciar, publicar ou disponibilizar o Software ou versões
+     modificadas em outros repositórios, pacotes ou meios de distribuição;
+  d) Remover ou alterar avisos de direitos autorais, marcas ou atribuições de
+     autoria presentes no Software.
+
+4. COMPONENTES E BIBLIOTECAS DE TERCEIROS
+O Software referencia pacotes, bibliotecas e ferramentas de terceiros (obtidos
+via NuGet, Docker ou outros gerenciadores). Esta licença aplica-se exclusivamente
+ao código e conteúdo autoral do projeto WalletFlow e NÃO altera, restringe ou
+substitui os direitos e termos das licenças originais concedidas pelos respectivos
+titulares desses componentes de terceiros.
+
+5. ISENÇÃO DE GARANTIAS E LIMITAÇÃO DE RESPONSABILIDADE
+O SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA" ("AS IS"), SEM GARANTIAS DE
+QUALQUER NATUREZA, EXPRESSAS OU IMPLÍCITAS. EM NENHUMA HIPÓTESE O AUTOR SERÁ
+RESPONSÁVEL POR QUAISQUER DANOS, REIVINDICAÇÕES OU RESPONSABILIDADES DECORRENTES
+DO USO OU DA IMPOSSIBILIDADE DE USO DESTE SOFTWARE.

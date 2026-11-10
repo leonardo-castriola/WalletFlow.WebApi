@@ -4,5 +4,7 @@
     <NoWarn>$(NoWarn);NU1900</NoWarn>
     <!-- Desativa a geracao do apphost.exe para evitar bloqueio (UnauthorizedAccessException) pelo OneDrive/Antivirus -->
     <UseAppHost>false</UseAppHost>
+    <Authors>Leonardo Castriola</Authors>
+    <Copyright>Copyright (c) 2026 Leonardo Castriola. Todos os direitos reservados.</Copyright>
   </PropertyGroup>
 </Project>
